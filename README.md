@@ -3,7 +3,7 @@
 <div align="center">
 
 ![Mavrix Bot](https://img.shields.io/badge/Mavrix-Tech%20Bot-blue?style=for-the-badge&logo=whatsapp)
-![Version](https://img.shields.io/badge/Version-2.0.0_Premium-success?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-2.2.1_Premium-success?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
 **Advanced, Scalable & Enterprise-Ready WhatsApp Bot**
@@ -60,17 +60,17 @@ Choose your preferred deployment method:
 
 <div align="center">
   <a href="https://youtu.be/-oz_u1iMgf8">
-    <img src="https://img.shields.io/badge/Deploy Tutorial-dc3545?style=for-the-badge&logo=youtube" alt="YouTube Link"/>
+    <img src="https://img.shields.io/badge/Deploy%20Tutorial-dc3545?style=for-the-badge&logo=youtube" alt="YouTube Link"/>
   </a>
   <a href="https://bot-hosting.net/?aff=1068419752923508776">
-    <img src="https://img.shields.io/badge/Deploy on Panel-28a745?style=for-the-badge" alt="Deploy on Panel"/>
+    <img src="https://img.shields.io/badge/Deploy%20on%20Panel-28a745?style=for-the-badge" alt="Deploy on Panel"/>
   </a>
 </div>
 
 ### Premium Hosting Panel
 <div align="center">
 <a href="https://dashboard.katabump.com/auth/login#d6b7d6" target="_blank">
-  <img src="https://img.shields.io/badge/Katabump-Premium Hosting-D6B7D6?style=for-the-badge&logo=server&logoColor=black" alt="Katabump"/>
+  <img src="https://img.shields.io/badge/Katabump-Premium%20Hosting-D6B7D6?style=for-the-badge&logo=server&logoColor=black" alt="Katabump"/>
 </a>
 </div>
 
@@ -80,8 +80,8 @@ Choose your preferred deployment method:
   <a href="https://t.me/+3QhFUZHx-nhhZmY1">
     <img src="https://img.shields.io/badge/Join%20Telegram-0078E7?style=for-the-badge&logo=telegram&logoColor=white" alt="Join Telegram"/>
   </a>
-  <a href="https://whatsapp.com/channel/0029Va90zAnIHphOuO8Msp3A">
-    <img src="https://img.shields.io/badge/Join%20WhatsApp-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Join WhatsApp"/>
+  <a href="https://whatsapp.com/channel/0029VahiFZQ4o7qN54LTzB17">
+    <img src="https://img.shields.io/badge/Join%20WhatsApp%20Channel-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Join WhatsApp Channel"/>
   </a>
 </div>
 
@@ -113,16 +113,16 @@ Choose your preferred deployment method:
 |-------|------------|
 | **Core** | Node.js, Baileys, Async |
 | **AI/ML** | TensorFlow.js, Natural Language Processing |
-| **Database** | MongoDB, Redis Cache |
-| **Security** | JWT, OAuth2, End-to-End Encryption |
-| **Deployment** | Docker, Kubernetes, AWS Ready |
+| **Database** | JSON Files, Node Cache |
+| **Security** | End-to-End Encryption, Rate Limiting |
+| **Deployment** | Docker, Panel Hosting, Cloud Ready |
 
 ## ⚡ Manual Installation
 
 ### Prerequisites
 - Node.js 18+ 
-- MongoDB Atlas
-- WhatsApp Business Account
+- WhatsApp Account
+- Stable Internet Connection
 
 ### Step-by-Step Setup
 
@@ -137,10 +137,10 @@ Choose your preferred deployment method:
     npm install
     ```
 
-3. **Configure your environment:**
+3. **Configure your settings:**
     ```bash
-    cp config.example.js config.js
-    # Edit config.js with your API keys and settings
+    # Edit settings.js with your bot configuration
+    nano settings.js
     ```
 
 4. **Run the bot:**
@@ -150,13 +150,16 @@ Choose your preferred deployment method:
 
 5. **Scan QR Code:**
     - Scan the QR code using WhatsApp Linked Devices
-    - Get your `creds.json` from pair code services
-    - Upload to `session/` folder
+    - Or use pairing code method above
+    - Your session will be saved automatically
 
 ### Docker Deployment
 ```bash
+# Build from source
+docker build -t mavrix-bot .
+
+# Run the container
 docker run -d \
   --name mavrix-bot \
-  -e SESSION_ID=premium-session \
-  -e MONGODB_URI=your_connection_string \
-  marvex/mavrix-bot:latest
+  -e SESSION_ID=your_session_id \
+  mavrix-bot
