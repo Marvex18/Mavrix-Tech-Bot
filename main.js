@@ -123,6 +123,7 @@ const { handleAutoReact, handleAutoReactCommand } = require('./lib/autoreact');
 global.packname = settings.packname;
 global.author = settings.author;
 global.ytch = "Mavrix Tech 💻";
+global.channelLink = "https://whatsapp.com/channel/0029VahiFZQ4o7qN54LTzB17"; // ✅ ADD THIS LINE
 
 // Add this near the top of main.js with other global configurations
 const channelInfo = {
@@ -568,7 +569,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 if (guessedLetter) {
                     guessLetter(sock, chatId, guessedLetter);
                 } else {
-                    sock.sendMessage(chatId, { text: 'Please guess a letter using .guess <letter>', ...channelInfo }, { quoted: message });
+                await sock.sendMessage(chatId, { text: 'Please guess a letter using .guess <letter>', ...channelInfo }, { quoted: message });
                 }
                 break;
             case userMessage.startsWith('.trivia'):
