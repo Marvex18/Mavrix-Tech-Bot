@@ -1,6 +1,6 @@
 /**
  * Knight Bot - A WhatsApp Bot
- * Copyright (c) 2024 Professor
+ * Copyright (c) 2025 Mavrix Tech
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the MIT License.
@@ -73,7 +73,7 @@ setInterval(() => {
 let phoneNumber = "911234567890"
 let owner = JSON.parse(fs.readFileSync('./data/owner.json'))
 
-global.botname = "MAVRIX BOT"
+global.botname = "Mavrix Bot"
 global.themeemoji = "•"
 const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code")
 const useMobile = process.argv.includes("--mobile")
