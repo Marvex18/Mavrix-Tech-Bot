@@ -2,15 +2,15 @@ const settings = {
   packname: 'Knight Bot',
   author: '‎',
   botName: "Mavrix Bot",
-  botOwner: 'Mavrix', // Your name
-  ownerNumber: '2348144654301', //Set your number here without + symbol, just add country code & number without any space
+  botOwner: 'Mavrix',
+  ownerNumber: '2348144654301',
   giphyApiKey: 'qnl7ssQChTdPjsKta2Ax2LMaGXz303tq',
   commandMode: "public",
   maxStoreMessages: 20, 
   storeWriteInterval: 10000,
   description: "This is a bot for managing group commands and automating tasks.",
   version: "2.2.1",
-  updateZipUrl: "https://github.com/mruniquehacker/Mavrix Bot-MD/archive/refs/heads/main.zip",
+  updateZipUrl: "https://github.com/Marvex18/Mavrix-Tech-Bot/archive/refs/heads/main.zip",
 };
 
 module.exports = settings;
