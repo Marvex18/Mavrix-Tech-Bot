@@ -9,7 +9,7 @@ async function githubCommand(sock, chatId, message) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-    const res = await fetch('https://api.github.com/repos/Marvex18/Mavrix-Tech-Bot', {
+    const res = await fetch('https://api.github.com/repos/Marvex18/Mavrix-Tech-Bot'); {
       signal: controller.signal,
       headers: {
         'User-Agent': 'Mavrix-Bot-MD',
