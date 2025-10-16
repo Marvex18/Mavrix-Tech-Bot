@@ -45,9 +45,52 @@ const { PHONENUMBER_MCC } = require('@whiskeysockets/baileys/lib/Utils/generics'
 const { rmSync, existsSync } = require('fs')
 const { join } = require('path')
 
-// FIX: Correct store import for Baileys v7
-const { makeInMemoryStore } = require("@whiskeysockets/baileys")
-const store = makeInMemoryStore({ logger: pino().child({ level: 'silent', stream: 'store' }) })
+// FIX: Correct store import for Baileys v7 with multiple fallbacks
+let makeInMemoryStore;
+try {
+    // Try the new path first (for latest versions)
+    ({ makeInMemoryStore } = require("@whiskeysockets/baileys/lib/store"));
+    console.log('✅ Store imported from @whiskeysockets/baileys/lib/store');
+} catch (error) {
+    try {
+        // Fallback to direct import
+        makeInMemoryStore = require("@whiskeysockets/baileys").makeInMemoryStore;
+        console.log('✅ Store imported from @whiskeysockets/baileys');
+    } catch (fallbackError) {
+        console.error('❌ Failed to import makeInMemoryStore, using fallback store:', fallbackError.message);
+        // Emergency fallback - create a minimal store
+        makeInMemoryStore = function() {
+            return {
+                bind: () => console.log('Store bound (fallback mode)'),
+                contacts: {},
+                chats: {},
+                messages: {},
+                loadMessage: async () => null,
+                saveMessage: async () => {},
+                toJSON: () => ({})
+            };
+        };
+    }
+}
+
+if (typeof makeInMemoryStore !== 'function') {
+    console.error('❌ makeInMemoryStore is still not a function. Creating emergency fallback store.');
+    makeInMemoryStore = function() {
+        return {
+            bind: () => console.log('Store bound (emergency fallback)'),
+            contacts: {},
+            chats: {},
+            messages: {},
+            loadMessage: async () => null,
+            saveMessage: async () => {},
+            toJSON: () => ({})
+        };
+    };
+}
+
+const store = makeInMemoryStore({ 
+    logger: pino().child({ level: 'silent', stream: 'store' }) 
+});
 
 // Initialize settings
 const settings = require('./settings')
