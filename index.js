@@ -35,8 +35,7 @@ const {
     proto,
     jidNormalizedUser,
     makeCacheableSignalKeyStore,
-    delay,
-    makeInMemoryStore // Added for store compatibility
+    delay
 } = require("@whiskeysockets/baileys")
 const NodeCache = require("node-cache")
 const pino = require("pino")
@@ -46,7 +45,8 @@ const { PHONENUMBER_MCC } = require('@whiskeysockets/baileys/lib/Utils/generics'
 const { rmSync, existsSync } = require('fs')
 const { join } = require('path')
 
-// FIX: Use Baileys built-in store instead of missing lightweight_store
+// FIX: Correct store import for Baileys v7
+const { makeInMemoryStore } = require("@whiskeysockets/baileys")
 const store = makeInMemoryStore({ logger: pino().child({ level: 'silent', stream: 'store' }) })
 
 // Initialize settings
@@ -89,6 +89,8 @@ try {
 
 global.botname = "Mavrix Bot"
 global.themeemoji = "•"
+global.channelLink = "https://whatsapp.com/channel/0029VahiFZQ4o7qN54LTzB17" // ✅ ADDED
+
 const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code")
 const useMobile = process.argv.includes("--mobile")
 
@@ -103,7 +105,7 @@ const question = (text) => {
     }
 }
 
-async function startMavrixBot() { // FIX: Renamed to match your bot
+async function startMavrixBot() {
     try {
         let { version, isLatest } = await fetchLatestBaileysVersion()
         console.log(chalk.blue(`Using Baileys version: ${version}`))
@@ -111,7 +113,7 @@ async function startMavrixBot() { // FIX: Renamed to match your bot
         const { state, saveCreds } = await useMultiFileAuthState(`./session`)
         const msgRetryCounterCache = new NodeCache()
 
-        const MavrixBot = makeWASocket({ // FIX: Consistent naming
+        const MavrixBot = makeWASocket({
             version,
             logger: pino({ level: 'silent' }),
             printQRInTerminal: !pairingCode,
@@ -207,7 +209,7 @@ async function startMavrixBot() { // FIX: Renamed to match your bot
         })
 
         MavrixBot.getName = (jid, withoutContact = false) => {
-            let id = MavrixBot.decodeJid(jid) // FIX: Added 'let'
+            let id = MavrixBot.decodeJid(jid)
             withoutContact = MavrixBot.withoutContact || withoutContact
             let v
             if (id.endsWith("@g.us")) {
@@ -299,11 +301,11 @@ async function startMavrixBot() { // FIX: Renamed to match your bot
                 });
 
                 await delay(1999)
-                console.log(chalk.yellow(`\n\n                  ${chalk.bold.blue(`[ ${global.botname} ]`)}\n\n`)) // FIX: Removed inconsistent fallback
+                console.log(chalk.yellow(`\n\n                  ${chalk.bold.blue(`[ ${global.botname} ]`)}\n\n`))
                 console.log(chalk.cyan(`< ================================================== >`))
                 console.log(chalk.magenta(`\n${global.themeemoji || '•'} YT CHANNEL: Mavrix Tech`))
                 console.log(chalk.magenta(`${global.themeemoji || '•'} GITHUB: Marvex18`))
-                console.log(chalk.magenta(`${global.themeemoji || '•'} WA NUMBER: ${owner[0]?.replace('@s.whatsapp.net', '') || 'Not set'}`)) // FIX: Safe access
+                console.log(chalk.magenta(`${global.themeemoji || '•'} WA NUMBER: ${owner[0]?.replace('@s.whatsapp.net', '') || 'Not set'}`))
                 console.log(chalk.magenta(`${global.themeemoji || '•'} CREDIT: Mavrix Tech`))
                 console.log(chalk.green(`${global.themeemoji || '•'} 🤖 Bot Connected Successfully! ✅`))
                 console.log(chalk.blue(`Bot Version: ${settings.version}`))
