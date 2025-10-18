@@ -1,4 +1,24 @@
+/**
+ * 🚀 Mavrix Bot - PREMIUM EDITION
+ * 📸 Instagram Downloader - Premium Media Management
+ * 🔧 Developed by Mavrix Tech
+ */
+
 const { igdl } = require("ruhend-scraper");
+
+const MAVRIX_ASCII = `
+╔══════════════════════════════════╗
+║           🚀 MAVRIX BOT          ║
+║         📸 INSTAGRAM PRO         ║
+║        PREMIUM DOWNLOADER        ║
+╚══════════════════════════════════╝
+`;
+
+const MAVRIX_SIGNATURE = `
+✨ Developed by Mavrix Tech
+🎯 Premium Features | ⚡ Lightning Fast
+🔒 Secure | 🛠️ Error Free
+`;
 
 // Store processed message IDs to prevent duplicates
 const processedMessages = new Set();
@@ -50,7 +70,7 @@ async function instagramCommand(sock, chatId, message) {
         
         if (!text) {
             return await sock.sendMessage(chatId, { 
-                text: "Please provide an Instagram link for the video."
+                text: `${MAVRIX_ASCII}*📸 INSTAGRAM PRO DOWNLOADER*\n\n❌ Please provide an Instagram link for the video.\n\n${MAVRIX_SIGNATURE}`
             });
         }
 
@@ -67,7 +87,7 @@ async function instagramCommand(sock, chatId, message) {
         
         if (!isValidUrl) {
             return await sock.sendMessage(chatId, { 
-                text: "That is not a valid Instagram link. Please provide a valid Instagram post, reel, or video link."
+                text: `${MAVRIX_ASCII}*❌ INVALID INSTAGRAM LINK!*\n\n📛 That is not a valid Instagram link.\n💡 Please provide a valid Instagram post, reel, or video link.\n\n${MAVRIX_SIGNATURE}`
             });
         }
 
@@ -75,11 +95,16 @@ async function instagramCommand(sock, chatId, message) {
             react: { text: '🔄', key: message.key }
         });
 
+        // Send processing message
+        await sock.sendMessage(chatId, {
+            text: `${MAVRIX_ASCII}*🔄 PROCESSING YOUR REQUEST...*\n\n📥 Downloading media from Instagram\n⚡ Premium servers activated\n🎯 High-quality download initiated\n\n${MAVRIX_SIGNATURE}`
+        });
+
         const downloadData = await igdl(text);
         
         if (!downloadData || !downloadData.data || downloadData.data.length === 0) {
             return await sock.sendMessage(chatId, { 
-                text: "❌ No media found at the provided link. The post might be private or the link is invalid."
+                text: `${MAVRIX_ASCII}*❌ DOWNLOAD FAILED!*\n\n📛 No media found at the provided link.\n💡 The post might be private or the link is invalid.\n\n${MAVRIX_SIGNATURE}`
             });
         }
 
@@ -93,9 +118,14 @@ async function instagramCommand(sock, chatId, message) {
         
         if (mediaToDownload.length === 0) {
             return await sock.sendMessage(chatId, { 
-                text: "❌ No valid media found to download. This might be a private post or the scraper failed."
+                text: `${MAVRIX_ASCII}*❌ DOWNLOAD FAILED!*\n\n📛 No valid media found to download.\n💡 This might be a private post or the scraper failed.\n\n${MAVRIX_SIGNATURE}`
             });
         }
+
+        // Send success message
+        await sock.sendMessage(chatId, {
+            text: `${MAVRIX_ASCII}*✅ DOWNLOAD SUCCESSFUL!*\n\n📦 Found ${mediaToDownload.length} media files\n🚀 Starting premium download...\n\n${MAVRIX_SIGNATURE}`
+        });
 
         // Download all media silently without status messages
         for (let i = 0; i < mediaToDownload.length; i++) {
@@ -113,12 +143,12 @@ async function instagramCommand(sock, chatId, message) {
                     await sock.sendMessage(chatId, {
                         video: { url: mediaUrl },
                         mimetype: "video/mp4",
-                        caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗞𝗡𝗜𝗚𝗛𝗧-𝗕𝗢𝗧"
+                        caption: "🚀 **DOWNLOADED BY MAVRIX BOT** ✨\n📸 Premium Instagram Downloader\n🔧 Powered by Mavrix Tech"
                     }, { quoted: message });
                 } else {
                     await sock.sendMessage(chatId, {
                         image: { url: mediaUrl },
-                        caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗞𝗡𝗜𝗚𝗛𝗧-𝗕𝗢𝗧"
+                        caption: "🚀 **DOWNLOADED BY MAVRIX BOT** ✨\n📸 Premium Instagram Downloader\n🔧 Powered by Mavrix Tech"
                     }, { quoted: message });
                 }
                 
@@ -128,15 +158,20 @@ async function instagramCommand(sock, chatId, message) {
                 }
                 
             } catch (mediaError) {
-                console.error(`Error downloading media ${i + 1}:`, mediaError);
+                console.error(`🎯 Mavrix Bot - Error downloading media ${i + 1}:`, mediaError);
                 // Continue with next media if one fails
             }
         }
 
+        // Send completion message
+        await sock.sendMessage(chatId, {
+            text: `${MAVRIX_ASCII}*🎉 DOWNLOAD COMPLETED!*\n\n✅ Successfully downloaded ${mediaToDownload.length} files\n⚡ Premium service completed\n🔧 Powered by Mavrix Tech\n\n${MAVRIX_SIGNATURE}`
+        });
+
     } catch (error) {
-        console.error('Error in Instagram command:', error);
+        console.error('🎯 Mavrix Bot - Error in Instagram command:', error);
         await sock.sendMessage(chatId, { 
-            text: "❌ An error occurred while processing the Instagram request. Please try again."
+            text: `${MAVRIX_ASCII}*❌ SYSTEM ERROR!*\n\n📛 An error occurred while processing the Instagram request.\n💡 Please try again.\n\n${MAVRIX_SIGNATURE}`
         });
     }
 }
