@@ -1,3 +1,4 @@
+// character.js
 const axios = require('axios');
 const { channelInfo } = require('../lib/messageConfig');
 
@@ -15,7 +16,12 @@ async function characterCommand(sock, chatId, message) {
     
     if (!userToAnalyze) {
         await sock.sendMessage(chatId, { 
-            text: 'Please mention someone or reply to their message to analyze their character!', 
+            text: `🔮 *Mavrix Bot - Character Analysis*\n\n` +
+                  `╔═══════════════════╗\n` +
+                  `║    ❌ MISSING     ║\n` +
+                  `╚═══════════════════╝\n\n` +
+                  `📝 Please mention someone or reply to their message to analyze their character!\n\n` +
+                  `✨ *Powered by Mavrix AI Systems*`,
             ...channelInfo 
         });
         return;
@@ -27,7 +33,7 @@ async function characterCommand(sock, chatId, message) {
         try {
             profilePic = await sock.profilePictureUrl(userToAnalyze, 'image');
         } catch {
-            profilePic = 'https://i.imgur.com/2wzGhpF.jpeg'; // Default image if no profile pic
+            profilePic = 'https://i.imgur.com/2wzGhpF.jpeg';
         }
 
         const traits = [
@@ -40,7 +46,7 @@ async function characterCommand(sock, chatId, message) {
         ];
 
         // Get 3-5 random traits
-        const numTraits = Math.floor(Math.random() * 3) + 3; // Random number between 3 and 5
+        const numTraits = Math.floor(Math.random() * 3) + 3;
         const selectedTraits = [];
         for (let i = 0; i < numTraits; i++) {
             const randomTrait = traits[Math.floor(Math.random() * traits.length)];
@@ -51,16 +57,33 @@ async function characterCommand(sock, chatId, message) {
 
         // Calculate random percentages for each trait
         const traitPercentages = selectedTraits.map(trait => {
-            const percentage = Math.floor(Math.random() * 41) + 60; // Random number between 60-100
-            return `${trait}: ${percentage}%`;
+            const percentage = Math.floor(Math.random() * 41) + 60;
+            const bars = '█'.repeat(Math.floor(percentage / 5)) + '░'.repeat(20 - Math.floor(percentage / 5));
+            return `▫️ ${trait}: ${bars} ${percentage}%`;
         });
 
-        // Create character analysis message
-        const analysis = `🔮 *Character Analysis* 🔮\n\n` +
-            `👤 *User:* ${userToAnalyze.split('@')[0]}\n\n` +
-            `✨ *Key Traits:*\n${traitPercentages.join('\n')}\n\n` +
-            `🎯 *Overall Rating:* ${Math.floor(Math.random() * 21) + 80}%\n\n` +
-            `Note: This is a fun analysis and should not be taken seriously!`;
+        const overallRating = Math.floor(Math.random() * 21) + 80;
+        const ratingStars = '⭐'.repeat(Math.floor(overallRating / 20));
+
+        // Create premium character analysis message
+        const analysis = `🔮 *Mavrix Bot - Character Analysis* 🔮\n\n` +
+            `╔══════════════════════════╗\n` +
+            `║       🌟 PROFILE        ║\n` +
+            `╚══════════════════════════╝\n\n` +
+            `👤 *User Analysis:* @${userToAnalyze.split('@')[0]}\n` +
+            `📊 *Scan Date:* ${new Date().toLocaleString()}\n\n` +
+            `╔══════════════════════════╗\n` +
+            `║       ✨ TRAITS          ║\n` +
+            `╚══════════════════════════╝\n\n` +
+            `${traitPercentages.join('\n')}\n\n` +
+            `╔══════════════════════════╗\n` +
+            `║       📈 SUMMARY         ║\n` +
+            `╚══════════════════════════╝\n\n` +
+            `🎯 *Overall Rating:* ${overallRating}%\n` +
+            `⭐ *Star Rating:* ${ratingStars}\n` +
+            `📅 *Analysis ID:* #${Math.random().toString(36).substr(2, 9).toUpperCase()}\n\n` +
+            `💫 *Note:* This AI-powered analysis is for entertainment purposes only!\n\n` +
+            `🔰 *Powered by Mavrix Tech AI Systems*`;
 
         // Send the analysis with the user's profile picture
         await sock.sendMessage(chatId, {
@@ -73,10 +96,16 @@ async function characterCommand(sock, chatId, message) {
     } catch (error) {
         console.error('Error in character command:', error);
         await sock.sendMessage(chatId, { 
-            text: 'Failed to analyze character! Try again later.',
+            text: `💥 *Mavrix Bot - Analysis Failed*\n\n` +
+                  `╔═══════════════════╗\n` +
+                  `║    🚨 ERROR!      ║\n` +
+                  `╚═══════════════════╝\n\n` +
+                  `❌ Failed to analyze character!\n` +
+                  `🔧 Our AI systems are experiencing high load\n\n` +
+                  `⚡ *Mavrix Tech - Try again later*`,
             ...channelInfo 
         });
     }
 }
 
-module.exports = characterCommand; 
+module.exports = characterCommand;
