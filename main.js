@@ -123,7 +123,7 @@ const { handleAutoReact, handleAutoReactCommand } = require('./lib/autoreact');
 global.packname = settings.packname;
 global.author = settings.author;
 global.ytch = "Mavrix Tech 💻";
-global.channelLink = "https://whatsapp.com/channel/0029VahiFZQ4o7qN54LTzB17"; // ✅ ADD THIS LINE
+global.channelLink = "https://whatsapp.com/channel/0029Va4K0PZ5a245NkngBA2M"; // ✅ ADD THIS LINE
 
 // Add this near the top of main.js with other global configurations
 const channelInfo = {
