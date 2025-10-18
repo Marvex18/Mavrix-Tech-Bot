@@ -1,13 +1,27 @@
 const fs = require('fs');
 const path = require('path');
 
+const MAVRIX_ASCII = `
+╔══════════════════════════════════╗
+║           🚀 MAVRIX BOT          ║
+║         📱 AUTOSTATUS PRO        ║
+║        PREMIUM AUTOMATION        ║
+╚══════════════════════════════════╝
+`;
+
+const MAVRIX_SIGNATURE = `
+✨ Developed by Mavrix Tech
+🎯 Premium Features | ⚡ Lightning Fast
+🔒 Secure | 🛠️ Error Free
+`;
+
 const channelInfo = {
     contextInfo: {
         forwardingScore: 1,
         isForwarded: true,
         forwardedNewsletterMessageInfo: {
             newsletterJid: '120363161513685998@newsletter',
-            newsletterName: 'Mavrix Bot MD',
+            newsletterName: 'Mavrix Bot Premium',
             serverMessageId: -1
         }
     }
@@ -20,7 +34,9 @@ const configPath = path.join(__dirname, '../data/autoStatus.json');
 if (!fs.existsSync(configPath)) {
     fs.writeFileSync(configPath, JSON.stringify({ 
         enabled: false, 
-        reactOn: false 
+        reactOn: false,
+        version: "2.0",
+        premium: true
     }));
 }
 
@@ -34,7 +50,7 @@ async function autoStatusCommand(sock, chatId, msg, args) {
         
         if (!isOwner) {
             await sock.sendMessage(chatId, { 
-                text: '❌ This command can only be used by the owner!',
+                text: `${MAVRIX_ASCII}\n*🚫 PREMIUM ACCESS DENIED!*\n\n❌ This command can only be used by the owner!\n🔒 Premium automation system\n\n${MAVRIX_SIGNATURE}`,
                 ...channelInfo
             });
             return;
@@ -45,10 +61,10 @@ async function autoStatusCommand(sock, chatId, msg, args) {
 
         // If no arguments, show current status
         if (!args || args.length === 0) {
-            const status = config.enabled ? 'enabled' : 'disabled';
-            const reactStatus = config.reactOn ? 'enabled' : 'disabled';
+            const status = config.enabled ? '🟢 ACTIVATED' : '🔴 DEACTIVATED';
+            const reactStatus = config.reactOn ? '🟢 ACTIVATED' : '🔴 DEACTIVATED';
             await sock.sendMessage(chatId, { 
-                text: `🔄 *Auto Status Settings*\n\n📱 *Auto Status View:* ${status}\n💫 *Status Reactions:* ${reactStatus}\n\n*Commands:*\n.autostatus on - Enable auto status view\n.autostatus off - Disable auto status view\n.autostatus react on - Enable status reactions\n.autostatus react off - Disable status reactions`,
+                text: `${MAVRIX_ASCII}\n*📱 AUTOSTATUS PRO SETTINGS*\n\n*⚡ Current Configuration:*\n• 👁️ Auto Status View: ${status}\n• 💚 Status Reactions: ${reactStatus}\n• 🚀 Version: Premium v2.0\n\n*💡 Premium Commands:*\n.autostatus 🟢on - Enable auto status view\n.autostatus 🔴off - Disable auto status view\n.autostatus react 🟢on - Enable status reactions\n.autostatus react 🔴off - Disable status reactions\n\n${MAVRIX_SIGNATURE}`,
                 ...channelInfo
             });
             return;
@@ -61,21 +77,21 @@ async function autoStatusCommand(sock, chatId, msg, args) {
             config.enabled = true;
             fs.writeFileSync(configPath, JSON.stringify(config));
             await sock.sendMessage(chatId, { 
-                text: '✅ Auto status view has been enabled!\nBot will now automatically view all contact statuses.',
+                text: `${MAVRIX_ASCII}\n*✅ AUTOSTATUS ACTIVATED!*\n\n⚡ Auto status view has been enabled!\n👁️ Bot will now automatically view all contact statuses\n💚 Premium automation active\n🚀 Mavrix Bot Technology\n\n${MAVRIX_SIGNATURE}`,
                 ...channelInfo
             });
         } else if (command === 'off') {
             config.enabled = false;
             fs.writeFileSync(configPath, JSON.stringify(config));
             await sock.sendMessage(chatId, { 
-                text: '❌ Auto status view has been disabled!\nBot will no longer automatically view statuses.',
+                text: `${MAVRIX_ASCII}\n*🔴 AUTOSTATUS DEACTIVATED!*\n\n❌ Auto status view has been disabled!\n🚫 Bot will no longer automatically view statuses\n💤 System in standby mode\n\n${MAVRIX_SIGNATURE}`,
                 ...channelInfo
             });
         } else if (command === 'react') {
             // Handle react subcommand
             if (!args[1]) {
                 await sock.sendMessage(chatId, { 
-                    text: '❌ Please specify on/off for reactions!\nUse: .autostatus react on/off',
+                    text: `${MAVRIX_ASCII}\n*❌ MISSING PARAMETER!*\n\n💡 Please specify on/off for reactions!\nUsage: .autostatus react 🟢on/🔴off\n\n${MAVRIX_SIGNATURE}`,
                     ...channelInfo
                 });
                 return;
@@ -86,33 +102,33 @@ async function autoStatusCommand(sock, chatId, msg, args) {
                 config.reactOn = true;
                 fs.writeFileSync(configPath, JSON.stringify(config));
                 await sock.sendMessage(chatId, { 
-                    text: '💫 Status reactions have been enabled!\nBot will now react to status updates.',
+                    text: `${MAVRIX_ASCII}\n*💚 STATUS REACTIONS ACTIVATED!*\n\n✅ Status reactions have been enabled!\n💚 Bot will now react to status updates\n⚡ Premium automation system\n🎯 Smart reaction technology\n\n${MAVRIX_SIGNATURE}`,
                     ...channelInfo
                 });
             } else if (reactCommand === 'off') {
                 config.reactOn = false;
                 fs.writeFileSync(configPath, JSON.stringify(config));
                 await sock.sendMessage(chatId, { 
-                    text: '❌ Status reactions have been disabled!\nBot will no longer react to status updates.',
+                    text: `${MAVRIX_ASCII}\n*🚫 STATUS REACTIONS DEACTIVATED!*\n\n❌ Status reactions have been disabled!\n🚫 Bot will no longer react to status updates\n💤 Reaction system offline\n\n${MAVRIX_SIGNATURE}`,
                     ...channelInfo
                 });
             } else {
                 await sock.sendMessage(chatId, { 
-                    text: '❌ Invalid reaction command! Use: .autostatus react on/off',
+                    text: `${MAVRIX_ASCII}\n*❌ INVALID REACTION COMMAND!*\n\n💡 Usage: .autostatus react 🟢on/🔴off\n🔧 Premium automation system\n\n${MAVRIX_SIGNATURE}`,
                     ...channelInfo
                 });
             }
         } else {
             await sock.sendMessage(chatId, { 
-                text: '❌ Invalid command! Use:\n.autostatus on/off - Enable/disable auto status view\n.autostatus react on/off - Enable/disable status reactions',
+                text: `${MAVRIX_ASCII}\n*❌ INVALID COMMAND!*\n\n*💡 Available Commands:*\n.autostatus 🟢on/🔴off - Enable/disable auto status view\n.autostatus react 🟢on/🔴off - Enable/disable status reactions\n\n${MAVRIX_SIGNATURE}`,
                 ...channelInfo
             });
         }
 
     } catch (error) {
-        console.error('Error in autostatus command:', error);
+        console.error('🎯 Mavrix Bot - Error in autostatus command:', error);
         await sock.sendMessage(chatId, { 
-            text: '❌ Error occurred while managing auto status!\n' + error.message,
+            text: `${MAVRIX_ASCII}\n*🚨 SYSTEM ERROR!*\n\n❌ Error occurred while managing auto status!\n💡 ${error.message}\n🔧 Mavrix Tech Support\n\n${MAVRIX_SIGNATURE}`,
             ...channelInfo
         });
     }
@@ -124,7 +140,7 @@ function isAutoStatusEnabled() {
         const config = JSON.parse(fs.readFileSync(configPath));
         return config.enabled;
     } catch (error) {
-        console.error('Error checking auto status config:', error);
+        console.error('🎯 Mavrix Bot - Error checking auto status config:', error);
         return false;
     }
 }
@@ -135,7 +151,7 @@ function isStatusReactionEnabled() {
         const config = JSON.parse(fs.readFileSync(configPath));
         return config.reactOn;
     } catch (error) {
-        console.error('Error checking status reaction config:', error);
+        console.error('🎯 Mavrix Bot - Error checking status reaction config:', error);
         return false;
     }
 }
@@ -167,9 +183,9 @@ async function reactToStatus(sock, statusKey) {
             }
         );
         
-        // Removed success log - only keep errors
+        console.log('🎯 Mavrix Bot - Premium status reaction sent');
     } catch (error) {
-        console.error('❌ Error reacting to status:', error.message);
+        console.error('🎯 Mavrix Bot - Error reacting to status:', error.message);
     }
 }
 
@@ -194,10 +210,10 @@ async function handleStatusUpdate(sock, status) {
                     // React to status if enabled
                     await reactToStatus(sock, msg.key);
                     
-                    // Removed success log - only keep errors
+                    console.log('🎯 Mavrix Bot - Premium status viewed and reacted');
                 } catch (err) {
                     if (err.message?.includes('rate-overlimit')) {
-                        console.log('⚠️ Rate limit hit, waiting before retrying...');
+                        console.log('🎯 Mavrix Bot - Rate limit hit, waiting before retrying...');
                         await new Promise(resolve => setTimeout(resolve, 2000));
                         await sock.readMessages([msg.key]);
                     } else {
@@ -217,10 +233,10 @@ async function handleStatusUpdate(sock, status) {
                 // React to status if enabled
                 await reactToStatus(sock, status.key);
                 
-                // Removed success log - only keep errors
+                console.log('🎯 Mavrix Bot - Premium direct status viewed');
             } catch (err) {
                 if (err.message?.includes('rate-overlimit')) {
-                    console.log('⚠️ Rate limit hit, waiting before retrying...');
+                    console.log('🎯 Mavrix Bot - Rate limit hit, waiting before retrying...');
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     await sock.readMessages([status.key]);
                 } else {
@@ -239,10 +255,10 @@ async function handleStatusUpdate(sock, status) {
                 // React to status if enabled
                 await reactToStatus(sock, status.reaction.key);
                 
-                // Removed success log - only keep errors
+                console.log('🎯 Mavrix Bot - Premium status reaction handled');
             } catch (err) {
                 if (err.message?.includes('rate-overlimit')) {
-                    console.log('⚠️ Rate limit hit, waiting before retrying...');
+                    console.log('🎯 Mavrix Bot - Rate limit hit, waiting before retrying...');
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     await sock.readMessages([status.reaction.key]);
                 } else {
@@ -253,11 +269,11 @@ async function handleStatusUpdate(sock, status) {
         }
 
     } catch (error) {
-        console.error('❌ Error in auto status view:', error.message);
+        console.error('🎯 Mavrix Bot - Error in auto status view:', error.message);
     }
 }
 
 module.exports = {
     autoStatusCommand,
     handleStatusUpdate
-}; 
+};
