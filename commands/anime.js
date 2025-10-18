@@ -5,11 +5,18 @@ const path = require('path');
 const webp = require('node-webpmux');
 const crypto = require('crypto');
 
-const PREMIUM_ASCII = `
-╔══════════════════════════╗
-║     🎌 ANIME PRO        ║
-║   PREMIUM CONTENT       ║
-╚══════════════════════════╝
+const MAVRIX_ASCII = `
+╔══════════════════════════════════╗
+║           🚀 MAVRIX BOT          ║
+║          🎌 ANIME PRO            ║
+║        PREMIUM CONTENT v2.0      ║
+╚══════════════════════════════════╝
+`;
+
+const MAVRIX_SIGNATURE = `
+✨ Developed by Mavrix Tech
+🎯 Premium Features | ⚡ Lightning Fast
+🔒 Secure | 🛠️ Error Free
 `;
 
 const ANIMU_BASE = 'https://api.some-random-api.com/animu';
@@ -24,7 +31,7 @@ function normalizeType(input) {
 async function sendAnimu(sock, chatId, message, type) {
     const endpoint = `${ANIMU_BASE}/${type}`;
     
-    console.log(`🎌 Fetching premium anime content: ${type}`);
+    console.log(`🎯 Mavrix Bot - Fetching premium anime content: ${type}`);
     
     try {
         const res = await axios.get(endpoint, {
@@ -42,11 +49,11 @@ async function sendAnimu(sock, chatId, message, type) {
             if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
             const inputExt = isAnimated ? 'gif' : 'jpg';
-            const input = path.join(tmpDir, `animu_premium_${Date.now()}.${inputExt}`);
-            const output = path.join(tmpDir, `animu_premium_${Date.now()}.webp`);
+            const input = path.join(tmpDir, `mavrix_animu_${Date.now()}.${inputExt}`);
+            const output = path.join(tmpDir, `mavrix_animu_${Date.now()}.webp`);
             fs.writeFileSync(input, mediaBuffer);
 
-            console.log(`🔄 Converting to premium sticker...`);
+            console.log(`🎯 Mavrix Bot - Converting to premium sticker...`);
 
             const ffmpegCmd = isAnimated 
                 ? `ffmpeg -y -i "${input}" -vf "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000,fps=15" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 80 -compression_level 6 "${output}"`
@@ -64,10 +71,11 @@ async function sendAnimu(sock, chatId, message, type) {
 
             const json = {
                 'sticker-pack-id': crypto.randomBytes(32).toString('hex'),
-                'sticker-pack-name': '🎌 Anime Premium Stickers',
-                'sticker-pack-publisher': 'Knight Bot Pro',
-                'emojis': ['🎌', '✨', '⭐'],
-                'premium': true
+                'sticker-pack-name': '🎌 Mavrix Bot Anime Stickers',
+                'sticker-pack-publisher': 'Mavrix Bot Pro',
+                'emojis': ['🎌', '✨', '⭐', '🚀'],
+                'premium': true,
+                'developer': 'Mavrix Tech'
             };
             const exifAttr = Buffer.from([0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00]);
             const jsonBuffer = Buffer.from(JSON.stringify(json), 'utf8');
@@ -80,7 +88,7 @@ async function sendAnimu(sock, chatId, message, type) {
             try { fs.unlinkSync(input); } catch {}
             try { fs.unlinkSync(output); } catch {}
             
-            console.log(`✅ Premium sticker conversion complete`);
+            console.log(`✅ Mavrix Bot - Premium sticker conversion complete`);
             return finalBuffer;
         }
 
@@ -92,7 +100,7 @@ async function sendAnimu(sock, chatId, message, type) {
 
             // Send processing status
             await sock.sendMessage(chatId, {
-                text: `${PREMIUM_ASCII}*⚡ PROCESSING ANIME CONTENT...*\n\n*Type:* ${type}\n*Quality:* 🎌 Premium\n*Format:* ${isGifLink ? 'Animated' : 'Static'} Sticker\n*Status:* Converting...`
+                text: `${MAVRIX_ASCII}\n*⚡ PROCESSING ANIME CONTENT...*\n\n*🎌 Type:* ${type}\n*⭐ Quality:* Premium HD\n*📁 Format:* ${isGifLink ? 'Animated' : 'Static'} Sticker\n*🔄 Status:* Converting...\n\n${MAVRIX_SIGNATURE}`
             });
 
             // Convert all media to premium stickers
@@ -109,7 +117,7 @@ async function sendAnimu(sock, chatId, message, type) {
                     const mediaBuf = Buffer.from(resp.data);
                     const stickerBuf = await convertMediaToSticker(mediaBuf, isGifLink);
                     
-                    console.log(`✅ Sending premium anime sticker: ${type}`);
+                    console.log(`✅ Mavrix Bot - Sending premium anime sticker: ${type}`);
                     await sock.sendMessage(
                         chatId,
                         { sticker: stickerBuf },
@@ -117,7 +125,7 @@ async function sendAnimu(sock, chatId, message, type) {
                     );
                     return;
                 } catch (error) {
-                    console.error('🚨 Error converting media to sticker:', error);
+                    console.error('🎯 Mavrix Bot - Error converting media to sticker:', error);
                 }
             }
 
@@ -127,7 +135,7 @@ async function sendAnimu(sock, chatId, message, type) {
                     chatId,
                     { 
                         image: { url: link }, 
-                        caption: `${PREMIUM_ASCII}*🎌 ANIME ${type.toUpperCase()}*\n\n*Source:* Some-Random-API\n*Quality:* 🖼️ Premium\n*Service:* Knight Bot Pro` 
+                        caption: `${MAVRIX_ASCII}\n*🎌 ANIME ${type.toUpperCase()}*\n\n*📡 Source:* Some-Random-API\n*⭐ Quality:* Premium HD\n*🔧 Service:* Mavrix Bot Pro\n\n${MAVRIX_SIGNATURE}` 
                     },
                     { quoted: message }
                 );
@@ -140,7 +148,7 @@ async function sendAnimu(sock, chatId, message, type) {
             await sock.sendMessage(
                 chatId,
                 { 
-                    text: `${PREMIUM_ASCII}*💫 ANIME QUOTE*\n\n"${data.quote}"\n\n*✨ Premium Anime Collection*` 
+                    text: `${MAVRIX_ASCII}\n*💫 ANIME QUOTE OF THE DAY*\n\n"${data.quote}"\n\n*✨ Premium Anime Collection*\n*🔧 Powered by Mavrix Tech*\n\n${MAVRIX_SIGNATURE}` 
                 },
                 { quoted: message }
             );
@@ -150,12 +158,12 @@ async function sendAnimu(sock, chatId, message, type) {
         await sock.sendMessage(
             chatId,
             { 
-                text: `${PREMIUM_ASCII}*🚨 PREMIUM CONTENT UNAVAILABLE*\n\nFailed to fetch anime ${type}. Service might be busy.` 
+                text: `${MAVRIX_ASCII}\n*🚨 PREMIUM CONTENT UNAVAILABLE*\n\n❌ Failed to fetch anime ${type}.\n💡 Service might be temporarily busy.\n🔧 Please try again later!\n\n${MAVRIX_SIGNATURE}` 
             },
             { quoted: message }
         );
     } catch (error) {
-        console.error('🚨 Premium anime error:', error);
+        console.error('🎯 Mavrix Bot - Premium anime error:', error);
         throw error;
     }
 }
@@ -180,10 +188,10 @@ async function animeCommand(sock, chatId, message, args) {
                     supported.join(', ');
                     
                 await sock.sendMessage(chatId, { 
-                    text: `${PREMIUM_ASCII}
+                    text: `${MAVRIX_ASCII}
 *🎌 PREMIUM ANIME COMMANDS*
 
-*Usage:* .animu <type>
+*💡 Usage:* .animu <type>
 
 *🎯 Available Types:*
 ${supported.map(type => `• ${type}`).join('\n')}
@@ -191,14 +199,15 @@ ${supported.map(type => `• ${type}`).join('\n')}
 *⚡ Premium Features:*
 • 🎌 High Quality Stickers
 • ⚡ Fast Processing
-• 🛡️ Premium API
-• ✨ Auto Conversion
+• 🛡️ Premium API Access
+• ✨ Auto Media Conversion
+• 🚀 Mavrix Bot Technology
 
-*💡 Example:* .animu hug` 
+*🔧 Example:* .animu hug\n\n${MAVRIX_SIGNATURE}` 
                 }, { quoted: message });
             } catch {
                 await sock.sendMessage(chatId, { 
-                    text: `${PREMIUM_ASCII}*🎌 ANIME TYPES*\n\n${supported.map(type => `• ${type}`).join('\n')}\n\n*Usage:* .animu <type>*` 
+                    text: `${MAVRIX_ASCII}\n*🎌 ANIME TYPES*\n\n${supported.map(type => `• ${type}`).join('\n')}\n\n*💡 Usage:* .animu <type>*\n\n${MAVRIX_SIGNATURE}` 
                 }, { quoted: message });
             }
             return;
@@ -206,18 +215,18 @@ ${supported.map(type => `• ${type}`).join('\n')}
 
         if (!supported.includes(sub)) {
             await sock.sendMessage(chatId, { 
-                text: `${PREMIUM_ASCII}*🚫 UNSUPPORTED TYPE!*\n\n"${sub}" is not available.\n\n*✅ Supported:* ${supported.join(', ')}` 
+                text: `${MAVRIX_ASCII}\n*🚫 UNSUPPORTED TYPE!*\n\n❌ "${sub}" is not available.\n\n*✅ Supported Types:* ${supported.join(', ')}\n\n${MAVRIX_SIGNATURE}` 
             }, { quoted: message });
             return;
         }
 
-        console.log(`🎌 Processing premium anime request: ${sub}`);
+        console.log(`🎯 Mavrix Bot - Processing premium anime request: ${sub}`);
         await sendAnimu(sock, chatId, message, sub);
         
     } catch (err) {
-        console.error('🚨 Error in premium anime command:', err);
+        console.error('🎯 Mavrix Bot - Error in premium anime command:', err);
         await sock.sendMessage(chatId, { 
-            text: `${PREMIUM_ASCII}*🚨 SERVICE ERROR!*\n\nFailed to fetch anime content. Please try again later!` 
+            text: `${MAVRIX_ASCII}\n*🚨 SERVICE ERROR!*\n\n❌ Failed to fetch anime content.\n💡 Please try again later!\n🔧 Powered by Mavrix Tech\n\n${MAVRIX_SIGNATURE}` 
         }, { quoted: message });
     }
 }
