@@ -8,6 +8,15 @@ const messageStore = new Map();
 const CONFIG_PATH = path.join(__dirname, '../data/antidelete.json');
 const TEMP_MEDIA_DIR = path.join(__dirname, '../tmp');
 
+// ASCII Art for Mavrix Bot
+const MAVRIX_ASCII = `
+╔══════════════════════════════╗
+║    🚀 MAVRIX BOT PREMIUM    ║
+║      ANTIDELETE SYSTEM      ║
+║    🔒 Mavrix Tech © 2024    ║
+╚══════════════════════════════╝
+`;
+
 // Ensure tmp dir exists
 if (!fs.existsSync(TEMP_MEDIA_DIR)) {
     fs.mkdirSync(TEMP_MEDIA_DIR, { recursive: true });
@@ -28,25 +37,27 @@ const getFolderSizeInMB = (folderPath) => {
 
         return totalSize / (1024 * 1024); // Convert bytes to MB
     } catch (err) {
-        console.error('Error getting folder size:', err);
+        console.error('📁 Error getting folder size:', err);
         return 0;
     }
 };
 
-// Function to clean temp folder if size exceeds 10MB
+// Function to clean temp folder if size exceeds 200MB
 const cleanTempFolderIfLarge = () => {
     try {
         const sizeMB = getFolderSizeInMB(TEMP_MEDIA_DIR);
         
         if (sizeMB > 200) {
+            console.log(`🧹 Cleaning temp folder: ${sizeMB.toFixed(2)}MB`);
             const files = fs.readdirSync(TEMP_MEDIA_DIR);
             for (const file of files) {
                 const filePath = path.join(TEMP_MEDIA_DIR, file);
                 fs.unlinkSync(filePath);
             }
+            console.log('✅ Temp folder cleaned successfully');
         }
     } catch (err) {
-        console.error('Temp cleanup error:', err);
+        console.error('❌ Temp cleanup error:', err);
     }
 };
 
@@ -68,7 +79,7 @@ function saveAntideleteConfig(config) {
     try {
         fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
     } catch (err) {
-        console.error('Config save error:', err);
+        console.error('❌ Config save error:', err);
     }
 }
 
@@ -79,14 +90,36 @@ async function handleAntideleteCommand(sock, chatId, message, match) {
     const senderIsSudo = await isSudo(senderId);
     
     if (!message.key.fromMe && !senderIsSudo) {
-        return sock.sendMessage(chatId, { text: '*Only the bot owner can use this command.*' }, { quoted: message });
+        return sock.sendMessage(chatId, { 
+            text: '🚫 *ACCESS DENIED*\n\nOnly Mavrix Bot Owner can use this command! 🔒' 
+        }, { quoted: message });
     }
 
     const config = loadAntideleteConfig();
 
     if (!match) {
+        const statusEmoji = config.enabled ? '🟢' : '🔴';
+        const statusText = config.enabled ? 'ACTIVE' : 'INACTIVE';
+        
         return sock.sendMessage(chatId, {
-            text: `*ANTIDELETE SETUP*\n\nCurrent Status: ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.antidelete on* - Enable\n*.antidelete off* - Disable`
+            text: `${MAVRIX_ASCII}
+🎯 *ANTIDELETE CONTROL PANEL*
+
+${statusEmoji} *Current Status:* ${statusText}
+
+⚡ *Commands:*
+┣ 🔹 *.antidelete on* - Activate Protection
+┣ 🔹 *.antidelete off* - Deactivate Protection
+┗ 🔹 *.antidelete* - Show this panel
+
+💡 *Features:*
+• 📝 Text Message Recovery
+• 🖼️ Image/Video Restoration  
+• 🎵 Audio File Backup
+• ⚡ View-Once Protection
+• 👥 Group Message Tracking
+
+🔒 *Powered by Mavrix Tech*`
         }, {quoted: message});
     }
 
@@ -95,11 +128,19 @@ async function handleAntideleteCommand(sock, chatId, message, match) {
     } else if (match === 'off') {
         config.enabled = false;
     } else {
-        return sock.sendMessage(chatId, { text: '*Invalid command. Use .antidelete to see usage.*' }, {quoted:message});
+        return sock.sendMessage(chatId, { 
+            text: '❌ *INVALID COMMAND*\n\nUse *.antidelete* to see available options.' 
+        }, {quoted:message});
     }
 
     saveAntideleteConfig(config);
-    return sock.sendMessage(chatId, { text: `*Antidelete ${match === 'on' ? 'enabled' : 'disabled'}*` }, {quoted:message});
+    
+    const actionEmoji = match === 'on' ? '🟢' : '🔴';
+    const actionText = match === 'on' ? 'ACTIVATED' : 'DEACTIVATED';
+    
+    return sock.sendMessage(chatId, { 
+        text: `${actionEmoji} *ANTIDELETE ${actionText}*\n\n${match === 'on' ? '🚀 Protection system is now active!' : '💤 Protection system has been disabled.'}\n\n🔒 Mavrix Bot Premium` 
+    }, {quoted:message});
 }
 
 // Store incoming messages (also handles anti-view-once by forwarding immediately)
@@ -182,8 +223,13 @@ async function storeMessage(sock, message) {
                 const ownerNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
                 const senderName = sender.split('@')[0];
                 const mediaOptions = {
-                    caption: `*Anti-ViewOnce ${mediaType}*
-From: @${senderName}`,
+                    caption: `🚨 *ANTI-VIEW-ONCE CAPTURED* 🚨
+
+📸 *Type:* ${mediaType.toUpperCase()}
+👤 *From:* @${senderName}
+⏰ *Time:* ${new Date().toLocaleString()}
+
+🔒 *Mavrix Bot Protection Active*`,
                     mentions: [sender]
                 };
                 if (mediaType === 'image') {
@@ -194,12 +240,12 @@ From: @${senderName}`,
                 // Cleanup immediately for view-once forward
                 try { fs.unlinkSync(mediaPath); } catch {}
             } catch (e) {
-                // ignore
+                console.error('❌ View-once forward error:', e);
             }
         }
 
     } catch (err) {
-        console.error('storeMessage error:', err);
+        console.error('❌ storeMessage error:', err);
     }
 }
 
@@ -213,6 +259,7 @@ async function handleMessageRevocation(sock, revocationMessage) {
         const deletedBy = revocationMessage.participant || revocationMessage.key.participant || revocationMessage.key.remoteJid;
         const ownerNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
 
+        // Don't notify if bot deleted the message
         if (deletedBy.includes(sock.user.id) || deletedBy === ownerNumber) return;
 
         const original = messageStore.get(messageId);
@@ -228,17 +275,24 @@ async function handleMessageRevocation(sock, revocationMessage) {
             day: '2-digit', month: '2-digit', year: 'numeric'
         });
 
-        let text = `*🔰 ANTIDELETE REPORT 🔰*\n\n` +
-            `*🗑️ Deleted By:* @${deletedBy.split('@')[0]}\n` +
-            `*👤 Sender:* @${senderName}\n` +
-            `*📱 Number:* ${sender}\n` +
-            `*🕒 Time:* ${time}\n`;
+        let text = `🚨 *DELETED MESSAGE DETECTED* 🚨
 
-        if (groupName) text += `*👥 Group:* ${groupName}\n`;
+╔══════════════════════════════╗
+║         MAVRIX ALERT         ║
+╚══════════════════════════════╝
+
+🗑️ *Deleted By:* @${deletedBy.split('@')[0]}
+👤 *Original Sender:* @${senderName}
+📱 *Sender Number:* ${sender}
+🕒 *Detection Time:* ${time}\n`;
+
+        if (groupName) text += `👥 *Group:* ${groupName}\n`;
 
         if (original.content) {
-            text += `\n*💬 Deleted Message:*\n${original.content}`;
+            text += `\n💬 *Deleted Content:*\n┏━━━━━━━━━━━━━━━━━━━━━━━━━━┓\n┃ ${original.content}\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n`;
         }
+
+        text += `\n🔒 *Mavrix Bot Premium Protection*`;
 
         await sock.sendMessage(ownerNumber, {
             text,
@@ -248,7 +302,7 @@ async function handleMessageRevocation(sock, revocationMessage) {
         // Media sending
         if (original.mediaType && fs.existsSync(original.mediaPath)) {
             const mediaOptions = {
-                caption: `*Deleted ${original.mediaType}*\nFrom: @${senderName}`,
+                caption: `📎 *Recovered ${original.mediaType.toUpperCase()}*\n👤 From: @${senderName}\n🔒 Mavrix Bot Premium`,
                 mentions: [sender]
             };
 
@@ -283,7 +337,7 @@ async function handleMessageRevocation(sock, revocationMessage) {
                 }
             } catch (err) {
                 await sock.sendMessage(ownerNumber, {
-                    text: `⚠️ Error sending media: ${err.message}`
+                    text: `⚠️ *MEDIA RECOVERY FAILED*\n\nError: ${err.message}\n\n🔒 Mavrix Bot System`
                 });
             }
 
@@ -291,14 +345,14 @@ async function handleMessageRevocation(sock, revocationMessage) {
             try {
                 fs.unlinkSync(original.mediaPath);
             } catch (err) {
-                console.error('Media cleanup error:', err);
+                console.error('❌ Media cleanup error:', err);
             }
         }
 
         messageStore.delete(messageId);
 
     } catch (err) {
-        console.error('handleMessageRevocation error:', err);
+        console.error('❌ handleMessageRevocation error:', err);
     }
 }
 
