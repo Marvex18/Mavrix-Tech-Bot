@@ -1,320 +1,251 @@
-const { igdl } = require('ruhend-scraper');
-const axios = require('axios');
-const { exec } = require('child_process');
+// groupmanage.js
 const fs = require('fs');
 const path = require('path');
-const webp = require('node-webpmux');
-const crypto = require('crypto');
-const settings = require('../settings');
-const { stickercropFromBuffer } = require('./stickercrop');
+const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
-async function convertBufferToStickerWebp(inputBuffer, isAnimated, cropSquare) {
-    const tmpDir = path.join(process.cwd(), 'tmp');
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+const PREMIUM_ASCII = `
+╔══════════════════════════╗
+║     👑 MAVRIX BOT       ║
+║    GROUP MANAGEMENT     ║
+╚══════════════════════════╝
+`;
 
-    const tempInputBase = path.join(tmpDir, `igs_${Date.now()}_${Math.random().toString(36).slice(2)}`);
-    const tempInput = isAnimated ? `${tempInputBase}.mp4` : `${tempInputBase}.jpg`;
-    const tempOutput = path.join(tmpDir, `igs_out_${Date.now()}_${Math.random().toString(36).slice(2)}.webp`);
-
-    fs.writeFileSync(tempInput, inputBuffer);
-
-    // Deferred cleanup to avoid race with WhatsApp download
-    const filesToDelete = [];
-    const scheduleDelete = (p) => {
-        if (!p) return;
-        filesToDelete.push(p);
-        setTimeout(() => {
-            try { fs.unlinkSync(p); } catch {}
-        }, 5000);
-    };
-
-    // Image filters
-    const vfCropSquareImg = "crop=min(iw\\,ih):min(iw\\,ih),scale=512:512";
-    const vfPadSquareImg = "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000";
-
-    let ffmpegCommand;
-    if (isAnimated) {
-        // For videos/GIFs
-        const isLargeVideo = inputBuffer.length > (5 * 1024 * 1024); // >5MB
-        const maxDuration = isLargeVideo ? 2 : 3;
-        // Match stickercrop.js style compression
-        if (cropSquare) {
-            if (isLargeVideo) {
-                ffmpegCommand = `ffmpeg -y -i "${tempInput}" -t 2 -vf "crop=min(iw\\,ih):min(iw\\,ih),scale=512:512,fps=8" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 30 -compression_level 6 -b:v 100k -max_muxing_queue_size 1024 "${tempOutput}"`;
-            } else {
-                ffmpegCommand = `ffmpeg -y -i "${tempInput}" -t 3 -vf "crop=min(iw\\,ih):min(iw\\,ih),scale=512:512,fps=12" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 50 -compression_level 6 -b:v 150k -max_muxing_queue_size 1024 "${tempOutput}"`;
-            }
-        } else {
-            if (isLargeVideo) {
-                ffmpegCommand = `ffmpeg -y -i "${tempInput}" -t 2 -vf "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000,fps=8" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 35 -compression_level 6 -b:v 100k -max_muxing_queue_size 1024 "${tempOutput}"`;
-            } else {
-                ffmpegCommand = `ffmpeg -y -i "${tempInput}" -t 3 -vf "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000,fps=12" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 45 -compression_level 6 -b:v 150k -max_muxing_queue_size 1024 "${tempOutput}"`;
-            }
-        }
-    } else {
-        // For images
-        const vf = `${cropSquare ? vfCropSquareImg : vfPadSquareImg},format=rgba`;
-        ffmpegCommand = `ffmpeg -y -i "${tempInput}" -vf "${vf}" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 75 -compression_level 6 "${tempOutput}"`;
-    }
-
-    await new Promise((resolve, reject) => {
-        exec(ffmpegCommand, (error, _stdout, _stderr) => {
-            if (error) return reject(error);
-            resolve();
+async function ensureGroupAndAdmin(sock, chatId, senderId) {
+    const isGroup = chatId.endsWith('@g.us');
+    if (!isGroup) {
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*🚫 COMMAND RESTRICTED!*\n\n╔══════════════════════════╗\n║   GROUP ONLY COMMAND    ║
+╚══════════════════════════╝\n\nThis command can only be used in groups! 👥\n\n💡 *Usage:* Add me to a group and make me admin!\n\n*🔰 Mavrix Tech - Group Management*`
         });
-    });
-
-    // If output is too large (> ~1MB), do a harsher second pass for videos
-    let webpBuffer = fs.readFileSync(tempOutput);
-    scheduleDelete(tempOutput);
-    if (isAnimated && webpBuffer.length > 1000 * 1024) {
-        try {
-            // Re-encode with stronger compression
-            const tempOutput2 = path.join(tmpDir, `igs_out2_${Date.now()}_${Math.random().toString(36).slice(2)}.webp`);
-            const harsherCmd = cropSquare
-                ? `ffmpeg -y -i "${tempInput}" -t 2 -vf "crop=min(iw\\,ih):min(iw\\,ih),scale=512:512,fps=8" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 30 -compression_level 6 -b:v 100k -max_muxing_queue_size 1024 "${tempOutput2}"`
-                : `ffmpeg -y -i "${tempInput}" -t 2 -vf "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000,fps=8" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 35 -compression_level 6 -b:v 100k -max_muxing_queue_size 1024 "${tempOutput2}"`;
-            await new Promise((resolve, reject) => {
-                exec(harsherCmd, (error) => error ? reject(error) : resolve());
-            });
-            if (fs.existsSync(tempOutput2)) {
-                webpBuffer = fs.readFileSync(tempOutput2);
-                scheduleDelete(tempOutput2);
-            }
-        } catch {}
+        return { ok: false };
     }
-
-    const img = new webp.Image();
-    await img.load(webpBuffer);
-
-    const json = {
-        'sticker-pack-id': crypto.randomBytes(32).toString('hex'),
-        'sticker-pack-name': settings.packname || 'Mavrix Bot',
-        'emojis': ['📸']
-    };
-    const exifAttr = Buffer.from([0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00]);
-    const jsonBuffer = Buffer.from(JSON.stringify(json), 'utf8');
-    const exif = Buffer.concat([exifAttr, jsonBuffer]);
-    exif.writeUIntLE(jsonBuffer.length, 14, 4);
-    img.exif = exif;
-
-    let finalBuffer = await img.save(null);
-
-    // Absolute final safety: if still too large, do a smaller-scale pass
-    if (finalBuffer.length > 900 * 1024) {
-        try {
-            const tempOutput3 = path.join(tmpDir, `igs_out3_${Date.now()}_${Math.random().toString(36).slice(2)}.webp`);
-            const vfSmall = cropSquare
-                ? `crop=min(iw\\,ih):min(iw\\,ih),scale=320:320${isAnimated ? ',fps=8' : ''}`
-                : `scale=320:320:force_original_aspect_ratio=decrease,pad=320:320:(ow-iw)/2:(oh-ih)/2:color=#00000000${isAnimated ? ',fps=8' : ''}`;
-            const cmdSmall = `ffmpeg -y -i "${tempInput}" ${isAnimated ? '-t 2' : ''} -vf "${vfSmall}" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality ${isAnimated ? 28 : 65} -compression_level 6 -b:v 80k -max_muxing_queue_size 1024 "${tempOutput3}"`;
-            await new Promise((resolve, reject) => {
-                exec(cmdSmall, (error) => error ? reject(error) : resolve());
-            });
-            if (fs.existsSync(tempOutput3)) {
-                const smallWebp = fs.readFileSync(tempOutput3);
-                const img2 = new webp.Image();
-                await img2.load(smallWebp);
-                const json2 = {
-                    'sticker-pack-id': crypto.randomBytes(32).toString('hex'),
-                    'sticker-pack-name': settings.packname || 'Mavrix Bot',
-                    'emojis': ['📸']
-                };
-                const exifAttr2 = Buffer.from([0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00]);
-                const jsonBuffer2 = Buffer.from(JSON.stringify(json2), 'utf8');
-                const exif2 = Buffer.concat([exifAttr2, jsonBuffer2]);
-                exif2.writeUIntLE(jsonBuffer2.length, 14, 4);
-                img2.exif = exif2;
-                finalBuffer = await img2.save(null);
-                scheduleDelete(tempOutput3);
-            }
-        } catch {}
-    }
-
-    // Defer deletes to ensure WhatsApp finishes reading
-    scheduleDelete(tempInput);
-
-    return finalBuffer;
-}
-
-async function fetchBufferFromUrl(url) {
-    // Attempt 1: simple arraybuffer with generous limits
-    try {
-        const res = await axios.get(url, {
-            responseType: 'arraybuffer',
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'Accept': '*/*',
-                // Some CDNs misbehave with Referer/Origin; omit to reduce blocks
-                'Accept-Encoding': 'identity'
-            },
-            timeout: 30000,
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-            decompress: true,
-            validateStatus: s => s >= 200 && s < 400
+    
+    // Check admin status of sender and bot
+    const isAdmin = require('../lib/isAdmin');
+    const adminStatus = await isAdmin(sock, chatId, senderId);
+    
+    if (!adminStatus.isBotAdmin) {
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*🤖 BOT PERMISSION ERROR!*\n\n╔══════════════════════════╗\n║   ADMIN ACCESS REQUIRED ║
+╚══════════════════════════╝\n\nPlease make Mavrix Bot a group admin first! 👮‍♂️\n\n🔧 *How to fix:*\n1. Go to group settings\n2. Make @Mavrix Bot an admin\n3. Try the command again\n\n*🔰 Mavrix Tech - Admin Privileges*`
         });
-        return Buffer.from(res.data);
-    } catch (e1) {
-        // Attempt 2: stream mode read fully
-        try {
-            const res = await axios.get(url, {
-                responseType: 'stream',
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                    'Accept': '*/*',
-                    'Accept-Encoding': 'identity'
-                },
-                timeout: 40000,
-                maxContentLength: Infinity,
-                maxBodyLength: Infinity,
-                validateStatus: s => s >= 200 && s < 400
-            });
-            const chunks = [];
-            await new Promise((resolve, reject) => {
-                res.data.on('data', c => chunks.push(c));
-                res.data.on('end', resolve);
-                res.data.on('error', reject);
-            });
-            return Buffer.concat(chunks);
-        } catch (e2) {
-            console.error('Both axios download attempts failed:', e1?.message || e1, e2?.message || e2);
-            throw e2;
-        }
+        return { ok: false };
     }
+    
+    if (!adminStatus.isSenderAdmin) {
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*🚫 PERMISSION DENIED!*\n\n╔══════════════════════════╗\n║   ADMIN ONLY COMMAND    ║
+╚══════════════════════════╝\n\nOnly group admins can use this command! 🔒\n\n📛 *Access Level:* Admin Required\n🛡️ *Security:* High Priority\n\n*🔰 Mavrix Tech - Security Protocol*`
+        });
+        return { ok: false };
+    }
+    
+    return { ok: true };
 }
 
-async function igsCommand(sock, chatId, message, crop = false) {
+async function setGroupDescription(sock, chatId, senderId, text, message) {
+    const check = await ensureGroupAndAdmin(sock, chatId, senderId);
+    if (!check.ok) return;
+    
+    const desc = (text || '').trim();
+    if (!desc) {
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*📝 GROUP DESCRIPTION*\n\n╔══════════════════════════╗\n║   USAGE GUIDE           ║
+╚══════════════════════════╝\n\n✨ *Command:* .setgdesc\n📌 *Usage:* .setgdesc <description>\n\n💡 *Examples:*\n• .setgdesc Welcome to our awesome group!\n• .setgdesc Official Mavrix Bot community\n• .setgdesc Chat, share, and have fun!\n\n⚡ *Max Length:* 512 characters\n🎯 *Note:* Only group admins can use this\n\n*🔰 Mavrix Tech - Group Management*`
+        }, { quoted: message });
+        return;
+    }
+    
+    if (desc.length > 512) {
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*❌ DESCRIPTION TOO LONG!*\n\n╔══════════════════════════╗\n║   LENGTH ERROR          ║
+╚══════════════════════════╝\n\nDescription exceeds 512 character limit! 📏\n\n📊 *Current Length:* ${desc.length} characters\n💡 *Solution:* Shorten your description\n\n*🔰 Mavrix Tech - Character Limit*`
+        }, { quoted: message });
+        return;
+    }
+    
     try {
-        const text = message.message?.conversation || message.message?.extendedTextMessage?.text || '';
-        const urlMatch = text.match(/https?:\/\/\S+/);
-        if (!urlMatch) {
-            await sock.sendMessage(chatId, { text: `Send an Instagram post/reel link.\nUsage:\n.igs <url>\n.igsc <url>` }, { quoted: message });
-            return;
-        }
+        // Send processing message
+        const processingMsg = await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*🔄 UPDATING GROUP INFO*\n\n╔══════════════════════════╗\n║   PROCESSING REQUEST    ║
+╚══════════════════════════╝\n\n📝 Updating group description...\n⚡ Applying changes...\n🔧 Verifying permissions...\n\n*🔰 Mavrix Tech - Processing*`
+        }, { quoted: message });
 
-        await sock.sendMessage(chatId, { react: { text: '🔄', key: message.key } });
+        await sock.groupUpdateDescription(chatId, desc);
+        
+        // Delete processing message
+        try {
+            await sock.sendMessage(chatId, { delete: processingMsg.key });
+        } catch (e) {}
+        
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*✅ DESCRIPTION UPDATED!*\n\n╔══════════════════════════╗\n║   SUCCESSFUL UPDATE     ║
+╚══════════════════════════╝\n\n📝 *New Description:*\n${desc}\n\n📊 *Details:*\n┌──────────────────────────┐
+│ 📏 Length: ${desc.length.toString().padEnd(3)} characters │
+│ 👥 Affected: All Members   │
+│ ⚡ Status: Successfully    │
+└──────────────────────────┘\n\n✨ *Group info has been updated!*\n\n*🔰 Powered by Mavrix Tech - Group Management*`
+        }, { quoted: message });
 
-        const downloadData = await igdl(urlMatch[0]).catch(() => null);
-        if (!downloadData || !downloadData.data) {
-            await sock.sendMessage(chatId, { text: '❌ Failed to fetch media from Instagram link.' }, { quoted: message });
-            return;
-        }
-        // Raw items
-        const rawItems = (downloadData?.data || []).filter(m => m && m.url);
-        // Deduplicate by exact URL first
-        const seenUrls = new Set();
-        const items = [];
-        for (const m of rawItems) {
-            if (!seenUrls.has(m.url)) {
-                seenUrls.add(m.url);
-                items.push(m);
-            }
-        }
-        if (items.length === 0) {
-            await sock.sendMessage(chatId, { text: '❌ No media found at the provided link.' }, { quoted: message });
-            return;
-        }
+        console.log(`📝 Mavrix Group: Updated description for ${chatId}`);
 
-        // Process up to 10 media items to avoid spam/timeouts
-        const maxItems = Math.min(items.length, 10);
-        const seenHashes = new Set();
-        for (let i = 0; i < maxItems; i++) {
-            try {
-                const media = items[i];
-                const mediaUrl = media.url;
-                const isVideo = (media?.type === 'video') || /\.(mp4|mov|avi|mkv|webm)$/i.test(mediaUrl);
-
-                const buffer = await fetchBufferFromUrl(mediaUrl);
-
-                // Content-based dedupe: skip if identical media already processed
-                const hash = require('crypto').createHash('sha1').update(buffer).digest('hex');
-                if (seenHashes.has(hash)) {
-                    continue;
-                }
-                seenHashes.add(hash);
-
-                let stickerBuffer = crop
-                    ? await stickercropFromBuffer(buffer, isVideo)
-                    : await convertBufferToStickerWebp(buffer, isVideo, false);
-
-                // Ensure final size under ~900KB; otherwise try a harsher mini fallback
-                let finalSticker = stickerBuffer;
-                if (finalSticker.length > 900 * 1024) {
-                    try {
-                        const fallback = await forceMiniSticker(buffer, isVideo, crop);
-                        if (fallback && fallback.length <= 900 * 1024) {
-                            finalSticker = fallback;
-                        }
-                    } catch (e) {
-                        console.error('forceMiniSticker error:', e);
-                    }
-                }
-
-                await sock.sendMessage(chatId, { sticker: finalSticker }, { quoted: message });
-
-                // Small delay to avoid rate limiting
-                if (i < maxItems - 1) {
-                    await new Promise(r => setTimeout(r, 800));
-                }
-            } catch (perItemErr) {
-                console.error('IGS item error:', perItemErr);
-                // continue with next item
-            }
-        }
-
-    } catch (err) {
-        console.error('Error in igs command:', err);
-        await sock.sendMessage(chatId, { text: 'Failed to create sticker from Instagram link.' }, { quoted: message });
+    } catch (e) {
+        console.error('Mavrix Group Description Error:', e);
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*❌ UPDATE FAILED!*\n\n╔══════════════════════════╗\n║   OPERATION ERROR       ║
+╚══════════════════════════╝\n\nFailed to update group description! 😔\n\n🔧 *Possible Reasons:*\n• Bot lost admin permissions\n• WhatsApp API limitations\n• Network connectivity issues\n\n💡 *Solution:*\n• Check bot admin status\n• Try again in 30 seconds\n• Contact group owner\n\n*🔰 Mavrix Tech Support*`
+        }, { quoted: message });
     }
 }
 
-// Extreme fallback to force very small stickers when needed
-async function forceMiniSticker(inputBuffer, isVideo, cropSquare) {
-    const tmpDir = path.join(process.cwd(), 'tmp');
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-
-    const tempInput = path.join(tmpDir, `mini_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`);
-    const tempOutput = path.join(tmpDir, `mini_out_${Date.now()}.webp`);
-    fs.writeFileSync(tempInput, inputBuffer);
-
-    const vf = cropSquare
-        ? `crop=min(iw\\,ih):min(iw\\,ih),scale=256:256${isVideo ? ',fps=6' : ''}`
-        : `scale=256:256:force_original_aspect_ratio=decrease,pad=256:256:(ow-iw)/2:(oh-ih)/2:color=#00000000${isVideo ? ',fps=6' : ''}`;
-
-    const cmd = `ffmpeg -y -i "${tempInput}" ${isVideo ? '-t 2' : ''} -vf "${vf}" -c:v libwebp -preset default -loop 0 -pix_fmt yuva420p -quality 25 -compression_level 6 -b:v 60k "${tempOutput}"`;
-
-    await new Promise((resolve, reject) => {
-        exec(cmd, (error) => error ? reject(error) : resolve());
-    });
-
-    if (!fs.existsSync(tempOutput)) {
-        try { fs.unlinkSync(tempInput); } catch {}
-        return null;
+async function setGroupName(sock, chatId, senderId, text, message) {
+    const check = await ensureGroupAndAdmin(sock, chatId, senderId);
+    if (!check.ok) return;
+    
+    const name = (text || '').trim();
+    if (!name) {
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*🏷️ GROUP NAME*\n\n╔══════════════════════════╗\n║   USAGE GUIDE           ║
+╚══════════════════════════╝\n\n✨ *Command:* .setgname\n📌 *Usage:* .setgname <new name>\n\n💡 *Examples:*\n• .setgname Mavrix Bot Community\n• .setgname Official Chat Group\n• .setgname Friends Forever\n\n⚡ *Max Length:* 25 characters\n🎯 *Note:* Only group admins can use this\n\n*🔰 Mavrix Tech - Group Management*`
+        }, { quoted: message });
+        return;
     }
-    const smallWebp = fs.readFileSync(tempOutput);
+    
+    if (name.length > 25) {
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*❌ NAME TOO LONG!*\n\n╔══════════════════════════╗\n║   LENGTH ERROR          ║
+╚══════════════════════════╝\n\nGroup name exceeds 25 character limit! 📏\n\n📊 *Current Length:* ${name.length} characters\n💡 *Solution:* Shorten the group name\n\n*🔰 Mavrix Tech - Character Limit*`
+        }, { quoted: message });
+        return;
+    }
+    
+    try {
+        // Send processing message
+        const processingMsg = await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*🔄 UPDATING GROUP INFO*\n\n╔══════════════════════════╗\n║   PROCESSING REQUEST    ║
+╚══════════════════════════╝\n\n🏷️ Updating group name...\n⚡ Applying changes...\n🔧 Verifying permissions...\n\n*🔰 Mavrix Tech - Processing*`
+        }, { quoted: message });
 
-    // Re-apply EXIF
-    const img = new webp.Image();
-    await img.load(smallWebp);
-    const json = {
-        'sticker-pack-id': crypto.randomBytes(32).toString('hex'),
-        'sticker-pack-name': settings.packname || 'Mavrix Bot',
-        'emojis': ['📸']
-    };
-    const exifAttr = Buffer.from([0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00]);
-    const jsonBuffer = Buffer.from(JSON.stringify(json), 'utf8');
-    const exif = Buffer.concat([exifAttr, jsonBuffer]);
-    exif.writeUIntLE(jsonBuffer.length, 14, 4);
-    img.exif = exif;
-    const finalBuffer = await img.save(null);
+        await sock.groupUpdateSubject(chatId, name);
+        
+        // Delete processing message
+        try {
+            await sock.sendMessage(chatId, { delete: processingMsg.key });
+        } catch (e) {}
+        
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*✅ NAME UPDATED!*\n\n╔══════════════════════════╗\n║   SUCCESSFUL UPDATE     ║
+╚══════════════════════════╝\n\n🏷️ *New Group Name:*\n${name}\n\n📊 *Details:*\n┌──────────────────────────┐
+│ 📏 Length: ${name.length.toString().padEnd(3)} characters │
+│ 👥 Affected: All Members   │
+│ ⚡ Status: Successfully    │
+└──────────────────────────┘\n\n✨ *Group has been renamed successfully!*\n\n*🔰 Powered by Mavrix Tech - Group Management*`
+        }, { quoted: message });
 
-    try { fs.unlinkSync(tempInput); } catch {}
-    try { fs.unlinkSync(tempOutput); } catch {}
+        console.log(`🏷️ Mavrix Group: Updated name to "${name}" for ${chatId}`);
 
-    return finalBuffer;
+    } catch (e) {
+        console.error('Mavrix Group Name Error:', e);
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*❌ UPDATE FAILED!*\n\n╔══════════════════════════╗\n║   OPERATION ERROR       ║
+╚══════════════════════════╝\n\nFailed to update group name! 😔\n\n🔧 *Possible Reasons:*\n• Bot lost admin permissions\n• Name contains invalid characters\n• WhatsApp API rate limit\n\n💡 *Solution:*\n• Check bot admin status\n• Try a different name\n• Wait 1 minute and retry\n\n*🔰 Mavrix Tech Support*`
+        }, { quoted: message });
+    }
 }
 
-module.exports = { igsCommand };
+async function setGroupPhoto(sock, chatId, senderId, message) {
+    const check = await ensureGroupAndAdmin(sock, chatId, senderId);
+    if (!check.ok) return;
 
+    const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const imageMessage = quoted?.imageMessage || message.message?.imageMessage;
+    
+    if (!imageMessage) {
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*🖼️ GROUP PHOTO*\n\n╔══════════════════════════╗\n║   USAGE GUIDE           ║
+╚══════════════════════════╝\n\n✨ *Command:* .setgpp\n📌 *Usage:* Send an image with caption .setgpp OR reply .setgpp to an image\n\n💡 *Supported Formats:*\n• JPEG, PNG images\n• High quality photos\n• Square images work best\n\n⚡ *Requirements:*\n• Image must be clear\n• Bot must be admin\n• You must be admin\n\n*🔰 Mavrix Tech - Group Management*`
+        }, { quoted: message });
+        return;
+    }
+    
+    try {
+        // Send processing message
+        const processingMsg = await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*🔄 UPDATING GROUP PHOTO*\n\n╔══════════════════════════╗\n║   PROCESSING IMAGE      ║
+╚══════════════════════════╝\n\n🖼️ Downloading image...\n⚡ Processing photo...\n🔧 Updating group profile...\n\n*🔰 Mavrix Tech - Image Processing*`
+        }, { quoted: message });
 
+        const tmpDir = path.join(process.cwd(), 'tmp');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+
+        const stream = await downloadContentFromMessage(imageMessage, 'image');
+        let buffer = Buffer.from([]);
+        for await (const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+
+        const imgPath = path.join(tmpDir, `mavrix_gpp_${Date.now()}.jpg`);
+        fs.writeFileSync(imgPath, buffer);
+
+        // Verify image size and dimensions
+        const fileStats = fs.statSync(imgPath);
+        if (fileStats.size > 10 * 1024 * 1024) { // 10MB limit
+            fs.unlinkSync(imgPath);
+            throw new Error('Image too large');
+        }
+
+        await sock.updateProfilePicture(chatId, { url: imgPath });
+        
+        // Cleanup temp file
+        try {
+            if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
+        } catch (_) {}
+        
+        // Delete processing message
+        try {
+            await sock.sendMessage(chatId, { delete: processingMsg.key });
+        } catch (e) {}
+        
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*✅ PHOTO UPDATED!*\n\n╔══════════════════════════╗\n║   SUCCESSFUL UPDATE     ║
+╚══════════════════════════╝\n\n🖼️ Group profile photo has been updated! 📸\n\n📊 *Details:*\n┌──────────────────────────┐
+│ 📁 File Size: ${(fileStats.size / 1024).toFixed(1)}KB   │
+│ 🎯 Quality: High          │
+│ 👥 Visible: All Members   │
+│ ⚡ Status: Success        │
+└──────────────────────────┘\n\n✨ *Your group now has a fresh new look!*\n\n*🔰 Powered by Mavrix Tech - Group Management*`
+        }, { quoted: message });
+
+        console.log(`🖼️ Mavrix Group: Updated profile photo for ${chatId}`);
+
+    } catch (e) {
+        console.error('Mavrix Group Photo Error:', e);
+        await sock.sendMessage(chatId, { 
+            text: `${PREMIUM_ASCII}
+*❌ PHOTO UPDATE FAILED!*\n\n╔══════════════════════════╗\n║   OPERATION ERROR       ║
+╚══════════════════════════╝\n\nFailed to update group profile photo! 😔\n\n🔧 *Possible Reasons:*\n• Image format not supported\n• File too large (>10MB)\n• Bot lost admin permissions\n• Network connectivity issues\n\n💡 *Solution:*\n• Use JPEG/PNG format\n• Compress large images\n• Check bot admin status\n• Try again in 1 minute\n\n*🔰 Mavrix Tech Support*`
+        }, { quoted: message });
+    }
+}
+
+module.exports = {
+    setGroupDescription,
+    setGroupName,
+    setGroupPhoto
+};
