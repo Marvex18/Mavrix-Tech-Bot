@@ -26,7 +26,7 @@ VERSION:3.0
 FN:${settings.botOwner}
 ORG:Mavrix Tech;
 TEL;type=CELL;type=VOICE;waid=${settings.ownerNumber}:+${settings.ownerNumber}
-EMAIL:contact@mavrix.tech
+EMAIL:mavrixtech@gmail.com
 URL:https://mavrix.tech
 NOTE:Developer of Mavrix Bot - Premium WhatsApp Bot
 X-ABLabel:📞 Mavrix Bot Owner
