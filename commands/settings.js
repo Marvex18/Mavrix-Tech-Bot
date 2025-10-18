@@ -18,7 +18,9 @@ async function settingsCommand(sock, chatId, message) {
         const isOwner = message.key.fromMe || senderIsSudo;
         
         if (!isOwner) {
-            await sock.sendMessage(chatId, { text: 'Only bot owner can use this command!' }, { quoted: message });
+            await sock.sendMessage(chatId, { 
+                text: '🚫 *ACCESS DENIED*\n\nOnly Mavrix Bot Owner can access settings! 🔒' 
+            }, { quoted: message });
             return;
         }
 
@@ -45,51 +47,73 @@ async function settingsCommand(sock, chatId, message) {
         const chatbotOn = groupId ? Boolean(userGroupData.chatbot && userGroupData.chatbot[groupId]) : false;
         const antitagCfg = groupId ? (userGroupData.antitag && userGroupData.antitag[groupId]) : null;
 
+        // ASCII Art Header
+        const header = `
+╔══════════════════════════════╗
+║    🚀 MAVRIX BOT PREMIUM    ║
+║       SETTINGS PANEL        ║
+║    🔒 Mavrix Tech © 2025    ║
+╚══════════════════════════════╝
+`;
+
         const lines = [];
-        lines.push('*BOT SETTINGS*');
+        lines.push(header);
+        lines.push('🎯 *SYSTEM SETTINGS*');
         lines.push('');
-        lines.push(`• Mode: ${mode.isPublic ? 'Public' : 'Private'}`);
-        lines.push(`• Auto Status: ${autoStatus.enabled ? 'ON' : 'OFF'}`);
-        lines.push(`• Autoread: ${autoread.enabled ? 'ON' : 'OFF'}`);
-        lines.push(`• Autotyping: ${autotyping.enabled ? 'ON' : 'OFF'}`);
-        lines.push(`• PM Blocker: ${pmblocker.enabled ? 'ON' : 'OFF'}`);
-        lines.push(`• Anticall: ${anticall.enabled ? 'ON' : 'OFF'}`);
-        lines.push(`• Auto Reaction: ${autoReaction ? 'ON' : 'OFF'}`);
+
+        // Global Settings with Premium Icons
+        lines.push(`🌐 *Bot Mode:* ${mode.isPublic ? '🟢 PUBLIC' : '🔴 PRIVATE'}`);
+        lines.push(`📊 *Auto Status:* ${autoStatus.enabled ? '🟢 ON' : '🔴 OFF'}`);
+        lines.push(`👁️ *Autoread:* ${autoread.enabled ? '🟢 ON' : '🔴 OFF'}`);
+        lines.push(`⌨️ *Autotyping:* ${autotyping.enabled ? '🟢 ON' : '🔴 OFF'}`);
+        lines.push(`🚫 *PM Blocker:* ${pmblocker.enabled ? '🟢 ON' : '🔴 OFF'}`);
+        lines.push(`📞 *Anticall:* ${anticall.enabled ? '🟢 ON' : '🔴 OFF'}`);
+        lines.push(`❤️ *Auto Reaction:* ${autoReaction ? '🟢 ON' : '🔴 OFF'}`);
+
         if (groupId) {
             lines.push('');
-            lines.push(`Group: ${groupId}`);
+            lines.push('👥 *GROUP SETTINGS*');
+            lines.push(`📱 *Group ID:* ${groupId.substring(0, 20)}...`);
+            lines.push('');
+
             if (antilinkOn) {
                 const al = userGroupData.antilink[groupId];
-                lines.push(`• Antilink: ON (action: ${al.action || 'delete'})`);
+                lines.push(`🔗 *Antilink:* 🟢 ON (⚡ ${al.action || 'delete'})`);
             } else {
-                lines.push('• Antilink: OFF');
+                lines.push('🔗 *Antilink:* 🔴 OFF');
             }
+
             if (antibadwordOn) {
                 const ab = userGroupData.antibadword[groupId];
-                lines.push(`• Antibadword: ON (action: ${ab.action || 'delete'})`);
+                lines.push(`🤬 *Antibadword:* 🟢 ON (⚡ ${ab.action || 'delete'})`);
             } else {
-                lines.push('• Antibadword: OFF');
+                lines.push('🤬 *Antibadword:* 🔴 OFF');
             }
-            lines.push(`• Welcome: ${welcomeOn ? 'ON' : 'OFF'}`);
-            lines.push(`• Goodbye: ${goodbyeOn ? 'ON' : 'OFF'}`);
-            lines.push(`• Chatbot: ${chatbotOn ? 'ON' : 'OFF'}`);
+
+            lines.push(`🎉 *Welcome:* ${welcomeOn ? '🟢 ON' : '🔴 OFF'}`);
+            lines.push(`👋 *Goodbye:* ${goodbyeOn ? '🟢 ON' : '🔴 OFF'}`);
+            lines.push(`🤖 *Chatbot:* ${chatbotOn ? '🟢 ON' : '🔴 OFF'}`);
+
             if (antitagCfg && antitagCfg.enabled) {
-                lines.push(`• Antitag: ON (action: ${antitagCfg.action || 'delete'})`);
+                lines.push(`🏷️ *Antitag:* 🟢 ON (⚡ ${antitagCfg.action || 'delete'})`);
             } else {
-                lines.push('• Antitag: OFF');
+                lines.push('🏷️ *Antitag:* 🔴 OFF');
             }
         } else {
             lines.push('');
-            lines.push('Note: Per-group settings will be shown when used inside a group.');
+            lines.push('💡 *Note:* Group-specific settings will appear when used in a group.');
         }
+
+        lines.push('');
+        lines.push('🔒 *Powered by Mavrix Tech*');
 
         await sock.sendMessage(chatId, { text: lines.join('\n') }, { quoted: message });
     } catch (error) {
-        console.error('Error in settings command:', error);
-        await sock.sendMessage(chatId, { text: 'Failed to read settings.' }, { quoted: message });
+        console.error('❌ Error in settings command:', error);
+        await sock.sendMessage(chatId, { 
+            text: '❌ *SETTINGS ERROR*\n\nFailed to read configuration. Please try again later.' 
+        }, { quoted: message });
     }
 }
 
 module.exports = settingsCommand;
-
-
