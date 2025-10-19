@@ -45,20 +45,32 @@ const { PHONENUMBER_MCC } = require('@whiskeysockets/baileys/lib/Utils/generics'
 const { rmSync, existsSync } = require('fs')
 const { join } = require('path')
 
-// FIX: Correct store import for Baileys v7 with multiple fallbacks
+// Memory optimization
+if (global.gc) {
+    setInterval(() => {
+        global.gc();
+        console.log('🧹 Memory cleaned');
+    }, 60000);
+}
+
+// Restart if memory gets too high
+setInterval(() => {
+    const used = process.memoryUsage().rss / 1024 / 1024;
+    if (used > 280) {
+        console.log('⚠️ High memory usage (>280MB), restarting...');
+        process.exit(1);
+    }
+}, 30000);
+
+// Store implementation
 let makeInMemoryStore;
 try {
-    // Try the new path first (for latest versions)
     ({ makeInMemoryStore } = require("@whiskeysockets/baileys/lib/store"));
-    console.log('✅ Store imported from @whiskeysockets/baileys/lib/store');
 } catch (error) {
     try {
-        // Fallback to direct import
         makeInMemoryStore = require("@whiskeysockets/baileys").makeInMemoryStore;
-        console.log('✅ Store imported from @whiskeysockets/baileys');
     } catch (fallbackError) {
-        console.error('❌ Failed to import makeInMemoryStore, using fallback store:', fallbackError.message);
-        // Emergency fallback - create a minimal store
+        console.error('❌ Failed to import makeInMemoryStore, using fallback store');
         makeInMemoryStore = function() {
             return {
                 bind: () => console.log('Store bound (fallback mode)'),
@@ -73,50 +85,15 @@ try {
     }
 }
 
-if (typeof makeInMemoryStore !== 'function') {
-    console.error('❌ makeInMemoryStore is still not a function. Creating emergency fallback store.');
-    makeInMemoryStore = function() {
-        return {
-            bind: () => console.log('Store bound (emergency fallback)'),
-            contacts: {},
-            chats: {},
-            messages: {},
-            loadMessage: async () => null,
-            saveMessage: async () => {},
-            toJSON: () => ({})
-        };
-    };
-}
-
 const store = makeInMemoryStore({ 
     logger: pino().child({ level: 'silent', stream: 'store' }) 
 });
 
-// Initialize settings
 const settings = require('./settings')
 
-// Memory optimization - Force garbage collection if available
-setInterval(() => {
-    if (global.gc) {
-        global.gc()
-        console.log('🧹 Garbage collection completed')
-    }
-}, 60_000) // every 1 minute
-
-// Memory monitoring - Restart if RAM gets too high
-setInterval(() => {
-    const used = process.memoryUsage().rss / 1024 / 1024
-    if (used > 400) {
-        console.log('⚠️ RAM too high (>400MB), restarting bot...')
-        process.exit(1) // Panel will auto-restart
-    }
-}, 30_000) // check every 30 seconds
-
-// FIX: Better phone number handling
 let phoneNumber = process.env.PHONE_NUMBER || "911234567890"
 let owner = []
 
-// FIX: Safe owner data loading
 try {
     if (fs.existsSync('./data/owner.json')) {
         const ownerData = JSON.parse(fs.readFileSync('./data/owner.json'))
@@ -132,18 +109,16 @@ try {
 
 global.botname = "Mavrix Bot"
 global.themeemoji = "•"
-global.channelLink = "https://whatsapp.com/channel/0029VahiFZQ4o7qN54LTzB17" // ✅ ADDED
+global.channelLink = "https://whatsapp.com/channel/0029VahiFZQ4o7qN54LTzB17"
 
 const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code")
 const useMobile = process.argv.includes("--mobile")
 
-// Only create readline interface if we're in an interactive environment
 const rl = process.stdin.isTTY ? readline.createInterface({ input: process.stdin, output: process.stdout }) : null
 const question = (text) => {
     if (rl) {
         return new Promise((resolve) => rl.question(text, resolve))
     } else {
-        // In non-interactive environment, use ownerNumber from settings
         return Promise.resolve(settings.ownerNumber || phoneNumber)
     }
 }
@@ -167,7 +142,7 @@ async function startMavrixBot() {
             },
             markOnlineOnConnect: true,
             generateHighQualityLinkPreview: true,
-            syncFullHistory: false, // FIX: Set to false for better performance
+            syncFullHistory: false,
             getMessage: async (key) => {
                 try {
                     let jid = jidNormalizedUser(key.remoteJid)
@@ -181,7 +156,6 @@ async function startMavrixBot() {
             defaultQueryTimeoutMs: 60000,
         })
 
-        // FIX: Use the proper store binding
         store.bind(MavrixBot.ev)
 
         // Message handling
@@ -202,9 +176,7 @@ async function startMavrixBot() {
                 if (!MavrixBot.public && !mek.key.fromMe && chatUpdate.type === 'notify') return
                 if (mek.key.id.startsWith('BAE5') && mek.key.id.length === 16) return
 
-                // Clear message retry cache to prevent memory bloat
                 if (MavrixBot?.msgRetryCounterCache) {
-                    // Only clear if cache is getting too large
                     if (MavrixBot.msgRetryCounterCache.keys().length > 1000) {
                         MavrixBot.msgRetryCounterCache.clear()
                     }
@@ -214,19 +186,9 @@ async function startMavrixBot() {
                     await handleMessages(MavrixBot, chatUpdate, true)
                 } catch (err) {
                     console.error("Error in handleMessages:", err)
-                    // Only try to send error message if we have a valid chatId
                     if (mek.key && mek.key.remoteJid) {
                         await MavrixBot.sendMessage(mek.key.remoteJid, {
                             text: '❌ An error occurred while processing your message.',
-                            contextInfo: {
-                                forwardingScore: 1,
-                                isForwarded: true,
-                                forwardedNewsletterMessageInfo: {
-                                    newsletterJid: '120363161513685998@newsletter',
-                                    newsletterName: 'Mavrix Bot MD',
-                                    serverMessageId: -1
-                                }
-                            }
                         }).catch(console.error);
                     }
                 }
@@ -235,7 +197,6 @@ async function startMavrixBot() {
             }
         })
 
-        // Add these event handlers for better functionality
         MavrixBot.decodeJid = (jid) => {
             if (!jid) return jid
             if (/:\d+@/gi.test(jid)) {
@@ -276,7 +237,7 @@ async function startMavrixBot() {
 
         MavrixBot.serializeM = (m) => smsg(MavrixBot, m, store)
 
-        // Handle pairing code
+        // Pairing code handling
         if (pairingCode && !MavrixBot.authState.creds.registered) {
             if (useMobile) throw new Error('Cannot use pairing code with mobile api')
 
@@ -287,10 +248,8 @@ async function startMavrixBot() {
                 phoneNumber = await question(chalk.bgBlack(chalk.greenBright(`Please type your WhatsApp number 😍\nFormat: 6281376552730 (without + or spaces) : `)))
             }
 
-            // Clean the phone number - remove any non-digit characters
             phoneNumber = phoneNumber.replace(/[^0-9]/g, '')
 
-            // Validate the phone number using awesome-phonenumber
             const pn = require('awesome-phonenumber');
             if (!pn('+' + phoneNumber).isValid()) {
                 console.log(chalk.red('Invalid phone number. Please enter your full international number (e.g., 15551234567 for US, 447911123456 for UK, etc.) without + or spaces.'));
@@ -320,7 +279,7 @@ async function startMavrixBot() {
                 // Auto-add owner's LID to sudo list
                 try {
                     const { addSudo } = require('./lib/index');
-                    const botLid = MavrixBot.user.lid; // Get LID from bot connection data
+                    const botLid = MavrixBot.user.lid;
                     if (botLid) {
                         const cleanLid = botLid.replace(/:\d+@/, '@');
                         await addSudo(cleanLid);
@@ -373,10 +332,9 @@ async function startMavrixBot() {
             }
         })
 
-        // Track recently-notified callers to avoid spamming messages
+        // Anticall handler
         const antiCallNotified = new Set();
 
-        // Anticall handler: block callers when enabled
         MavrixBot.ev.on('call', async (calls) => {
             try {
                 const { readState: readAnticallState } = require('./commands/anticall');
@@ -388,7 +346,6 @@ async function startMavrixBot() {
                     if (!callerJid) continue;
                     
                     try {
-                        // First: attempt to reject the call if supported
                         try {
                             if (typeof MavrixBot.rejectCall === 'function' && call.id) {
                                 await MavrixBot.rejectCall(call.id, callerJid);
@@ -399,7 +356,6 @@ async function startMavrixBot() {
                             console.log('Call rejection failed:', callError.message)
                         }
 
-                        // Notify the caller only once within a short window
                         if (!antiCallNotified.has(callerJid)) {
                             antiCallNotified.add(callerJid);
                             setTimeout(() => antiCallNotified.delete(callerJid), 60000);
@@ -409,7 +365,6 @@ async function startMavrixBot() {
                         console.log('Failed to send anticall message:', messageError.message)
                     }
                     
-                    // Then: block after a short delay to ensure rejection and message are processed
                     setTimeout(async () => {
                         try { 
                             await MavrixBot.updateBlockStatus(callerJid, 'block'); 
@@ -430,7 +385,7 @@ async function startMavrixBot() {
             await handleGroupParticipantUpdate(MavrixBot, update);
         });
 
-        // Additional event handlers for status
+        // Status handler
         MavrixBot.ev.on('messages.upsert', async (m) => {
             if (m.messages[0].key && m.messages[0].key.remoteJid === 'status@broadcast') {
                 await handleStatus(MavrixBot, m);
