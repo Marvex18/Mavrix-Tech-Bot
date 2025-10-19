@@ -4,8 +4,8 @@
   "description": "WhatsApp Bot",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "start:optimized": "node --max-old-space-size=512 --optimize-for-size index.js",
+    "start": "node --max-old-space-size=256 index.js",
+    "start:optimized": "node --max-old-space-size=256 --optimize-for-size index.js",
     "start:debug": "node --trace-warnings index.js",
     "start:fix": "rm -rf node_modules package-lock.json && npm install --legacy-peer-deps && npm start",
     "cleanup": "node cleanup.js",
