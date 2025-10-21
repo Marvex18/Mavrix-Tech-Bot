@@ -254,7 +254,7 @@ global.botname = "Mavrix Bot"
 
 global.themeemoji = "•"
 
-global.channelLink = "https://whatsapp.com/channel/0029VahiFZQ4o7qN54LTzB17"
+global.channelLink = "https://whatsapp.com/channel/0029Va4K0PZ5a245NkngBA2M"
 
 const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code")
 
