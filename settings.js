@@ -1,9 +1,9 @@
 const settings = {
-  packname: 'Knight Bot',
+  packname: 'Mavrix Bot',
   author: '‎',
   botName: "Mavrix Bot",
   botOwner: 'Mavrix',
-  ownerNumber: '2348144654301',
+  ownerNumber: '2349053516893',
   giphyApiKey: 'qnl7ssQChTdPjsKta2Ax2LMaGXz303tq',
   commandMode: "public",
   maxStoreMessages: 20, 
