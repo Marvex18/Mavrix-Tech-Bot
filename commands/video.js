@@ -642,12 +642,13 @@ async function videoCommand(sock, chatId, message) {
       try {
         const searchResults = await yts(searchQuery);
         
-      if (!searchResults.videos || searchResults.videos.length === 0) {
+        if (!searchResults.videos || searchResults.videos.length === 0) {
           await sock.sendMessage(chatId, {
             text: `❌ No videos found for "${searchQuery}"\n\n💡 Try:\n• Movie/drama titles\n• Add "mkv" or "mp4" to search\n• YouTube URL directly`
           }, { quoted: message });
           return;
         }
+
         videoInfo = searchResults.videos[0]; // Take first result for YouTube
         videoUrl = videoInfo.url;
         videoInfo.format = 'mp4'; // YouTube provides MP4
@@ -661,7 +662,6 @@ async function videoCommand(sock, chatId, message) {
         return;
       }
     }
-
     // 📸 Send thumbnail
     if (videoInfo.thumbnail && (videoInfo.thumbnail.startsWith('https') || (isMovieSearch && videoInfo.thumbnail))) {
       try {
