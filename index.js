@@ -28,30 +28,6 @@ const PREMIUM_BANNER = `
 ╚══════════════════════════════════════════════════════════════╝
 `;
 
-const CONNECTING_BANNER = `
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║                   🔄 CONNECTING TO WHATSAPP...              ║
-║                                                              ║
-║              📡 Establishing secure connection...           ║
-║              ⏳ Loading premium features...                 ║
-║              🎯 Preparing Mavrix AI engine...              ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
-`;
-
-const CONNECTED_BANNER = `
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║                   ✅ CONNECTION SUCCESSFUL!                 ║
-║                                                              ║
-║              🌟 Mavrix Premium is now ONLINE!              ║
-║              🔒 Secure · Fast · Reliable                   ║
-║              🚀 Ready for premium performance!             ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
-`;
-
 require('./settings')
 const { Boom } = require('@hapi/boom')
 const fs = require('fs')
@@ -87,83 +63,6 @@ const { PHONENUMBER_MCC } = require('@whiskeysockets/baileys/lib/Utils/generics'
 const { rmSync, existsSync } = require('fs')
 const { join } = require('path')
 
-// 🎯 PREMIUM AUTO-UPDATER
-class PremiumUpdater {
-    constructor() {
-        this.GITHUB_OWNER = 'Marvex18';
-        this.GITHUB_REPO = 'Mavrix-Tech-Bot';
-        this.BRANCH = 'main';
-        this.API_URL = `https://api.github.com/repos/${this.GITHUB_OWNER}/${this.GITHUB_REPO}/commits/${this.BRANCH}`;
-    }
-
-    async checkForUpdates() {
-        try {
-            const https = require('https');
-            return new Promise((resolve, reject) => {
-                https.get(this.API_URL, {
-                    headers: { 'User-Agent': 'Mavrix-Premium-Bot' }
-                }, res => {
-                    let data = '';
-                    res.on('data', chunk => data += chunk);
-                    res.on('end', () => {
-                        try {
-                            const commitInfo = JSON.parse(data);
-                            resolve({
-                                sha: commitInfo.sha,
-                                message: commitInfo.commit?.message || 'No message',
-                                author: commitInfo.commit?.author?.name || 'Unknown',
-                                date: commitInfo.commit?.author?.date
-                            });
-                        } catch (e) {
-                            reject('Failed to parse GitHub response');
-                        }
-                    });
-                }).on('error', reject);
-            });
-        } catch (error) {
-            console.log(chalk.yellow('⚠️  Could not check for updates (offline mode)'));
-            return null;
-        }
-    }
-
-    async performUpdate(sock, chatId) {
-        try {
-            await sock.sendMessage(chatId, {
-                text: '🚀 *Premium Update Started!*\n\n📦 Downloading latest version...\n⏳ This may take a moment...'
-            });
-
-            // Git pull update
-            await this.runCommand('git reset --hard HEAD');
-            await this.runCommand('git pull origin main');
-            await this.runCommand('npm install --legacy-peer-deps');
-
-            await sock.sendMessage(chatId, {
-                text: '✅ *Update Complete!*\n\n🎊 Bot upgraded to latest version!\n🔄 Restarting in 3 seconds...\n\n⭐ *Thank you for using Mavrix Premium!*'
-            });
-
-            setTimeout(() => {
-                console.log(chalk.green.bold('🔄 Premium Update Complete - Restarting...'));
-                process.exit(0);
-            }, 3000);
-
-        } catch (error) {
-            await sock.sendMessage(chatId, {
-                text: `❌ *Update Failed*\n\n🔧 Error: ${error.message}\n💡 Please update manually using git pull`
-            });
-        }
-    }
-
-    runCommand(cmd) {
-        return new Promise((resolve, reject) => {
-            const { exec } = require("child_process");
-            exec(cmd, (err, stdout, stderr) => {
-                if (err) return reject(stderr || stdout);
-                resolve(stdout);
-            });
-        });
-    }
-}
-
 // Memory optimization
 if (global.gc) {
     setInterval(() => {
@@ -181,7 +80,7 @@ setInterval(() => {
     }
 }, 30000);
 
-// Store implementation
+// Store implementation - FIXED THE TYPO!
 let makeInMemoryStore;
 try {
     ({ makeInMemoryStore } = require("@whiskeysockets/baileys/lib/store"));
@@ -204,6 +103,7 @@ try {
     }
 }
 
+// FIXED LINE: Changed makeInMemorStore to makeInMemoryStore
 const store = makeInMemoryStore({ 
     logger: pino().child({ level: 'silent', stream: 'store' }) 
 });
@@ -241,9 +141,6 @@ const question = (text) => {
         return Promise.resolve(settings.ownerNumber || phoneNumber)
     }
 }
-
-// 🎯 AUTO-UPDATE CHECKER VARIABLE
-let autoUpdateInterval = null;
 
 async function startMavrixBot() {
     try {
@@ -283,9 +180,6 @@ async function startMavrixBot() {
         })
 
         store.bind(MavrixBot.ev)
-
-        // 🎯 INITIALIZE PREMIUM UPDATER
-        const premiumUpdater = new PremiumUpdater();
 
         // Message handling
         MavrixBot.ev.on('messages.upsert', async chatUpdate => {
@@ -402,8 +296,7 @@ async function startMavrixBot() {
         MavrixBot.ev.on('connection.update', async (s) => {
             const { connection, lastDisconnect } = s
             if (connection == "open") {
-                console.log(chalk.hex('#00FFAA')(CONNECTED_BANNER));
-                console.log(chalk.yellow(`🌿Connected to => ` + JSON.stringify(MavrixBot.user, null, 2)))
+                console.log(chalk.hex('#00FFAA')(`🌿Connected to => ` + JSON.stringify(MavrixBot.user, null, 2)))
 
                 // Auto-add owner's LID to sudo list
                 try {
@@ -415,32 +308,6 @@ async function startMavrixBot() {
                     }
                 } catch (error) {
                     console.error('Error adding owner LID to sudo list:', error);
-                }
-
-                // 🎯 START AUTO-UPDATE CHECKER
-                try {
-                    // Check for updates on startup
-                    const updateInfo = await premiumUpdater.checkForUpdates();
-                    if (updateInfo) {
-                        console.log(chalk.hex('#FF6B6B')(`🎉 Update Available: ${updateInfo.sha.slice(0, 7)} by ${updateInfo.author}`));
-                        
-                        // Notify owner
-                        const botNumber = MavrixBot.user.id.split(':')[0] + '@s.whatsapp.net';
-                        await MavrixBot.sendMessage(botNumber, {
-                            text: `🎉 *Premium Update Available!*\n\n📦 New version ready!\n💫 Use *.update* to install\n🔧 Commit: ${updateInfo.sha.slice(0, 7)}\n👤 Author: ${updateInfo.author}\n📝 Message: ${updateInfo.message}\n\n⭐ Keep your Mavrix Bot premium!`,
-                            contextInfo: {
-                                forwardingScore: 1,
-                                isForwarded: true,
-                                forwardedNewsletterMessageInfo: {
-                                    newsletterJid: '120363161513685998@newsletter',
-                                    newsletterName: 'Mavrix MD',
-                                    serverMessageId: -1
-                                }
-                            }
-                        });
-                    }
-                } catch (error) {
-                    console.log(chalk.yellow('⚠️  Update check skipped'));
                 }
 
                 const botNumber = MavrixBot.user.id.split(':')[0] + '@s.whatsapp.net';
@@ -471,12 +338,6 @@ async function startMavrixBot() {
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode
                 console.log(chalk.yellow(`Connection closed. Status: ${statusCode}`))
-                
-                // 🎯 CLEAR AUTO-UPDATE INTERVAL
-                if (autoUpdateInterval) {
-                    clearInterval(autoUpdateInterval);
-                    autoUpdateInterval = null;
-                }
                 
                 if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
                     try {
@@ -558,13 +419,6 @@ async function startMavrixBot() {
         
     } catch (error) {
         console.error('Fatal error in bot initialization:', error)
-        
-        // 🎯 CLEAR AUTO-UPDATE INTERVAL ON ERROR
-        if (autoUpdateInterval) {
-            clearInterval(autoUpdateInterval);
-            autoUpdateInterval = null;
-        }
-        
         throw error
     }
 }
@@ -572,26 +426,12 @@ async function startMavrixBot() {
 // Start the bot with error handling
 startMavrixBot().catch(error => {
     console.error('Failed to start bot:', error)
-    
-    // 🎯 CLEAR AUTO-UPDATE INTERVAL ON STARTUP ERROR
-    if (autoUpdateInterval) {
-        clearInterval(autoUpdateInterval);
-        autoUpdateInterval = null;
-    }
-    
     console.log('Restarting in 10 seconds...')
     setTimeout(startMavrixBot, 10000)
 })
 
 process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err)
-    
-    // 🎯 CLEAR AUTO-UPDATE INTERVAL ON UNCAUGHT EXCEPTION
-    if (autoUpdateInterval) {
-        clearInterval(autoUpdateInterval);
-        autoUpdateInterval = null;
-    }
-    
     console.log('Restarting bot...')
     setTimeout(startMavrixBot, 5000)
 })
@@ -599,29 +439,6 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (err) => {
     console.error('Unhandled Rejection:', err)
 })
-
-// 🎯 GRACEFUL SHUTDOWN HANDLING
-process.on('SIGINT', () => {
-    console.log(chalk.hex('#FFD700')('\n🔄 Premium Bot shutting down gracefully...'));
-    
-    if (autoUpdateInterval) {
-        clearInterval(autoUpdateInterval);
-        autoUpdateInterval = null;
-    }
-    
-    process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-    console.log(chalk.hex('#FFD700')('\n🔄 Received SIGTERM, shutting down...'));
-    
-    if (autoUpdateInterval) {
-        clearInterval(autoUpdateInterval);
-        autoUpdateInterval = null;
-    }
-    
-    process.exit(0);
-});
 
 let file = require.resolve(__filename)
 fs.watchFile(file, () => {
