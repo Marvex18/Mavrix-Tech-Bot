@@ -9,18 +9,18 @@
     "cleanup": "node cleanup.js",
     "reset-session": "node reset-session.js",
     "start:clean": "npm run cleanup && npm run start:optimized",
-     "update:auto": "node --max-old-space-size=256 index.js --auto-update",
-    "update:check": "node commands/update.js --check"
+    "update:auto": "node --max-old-space-size=256 index.js --auto-update",
+    "update:check": "node commands/update.js --check",
     "start:fresh": "npm run reset-session && npm start",
     "install:panel": "npm install --legacy-peer-deps",
     "install:force": "npm install --force",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "docker:build": "docker build -t docker run -e SESSION_ID=$SESSION_ID mavrixbot"
+    "docker:build": "docker build -t mavrixbot . && docker run -e SESSION_ID=$SESSION_ID mavrixbot"
   },
   "keywords": [
     "whatsapp-bot"
   ],
-  "author": "",
+  "author": "Mavrix18",
   "license": "ISC",
   "dependencies": {
     "@adiwajshing/keyed-db": "^0.2.4",
@@ -29,7 +29,7 @@
     "@types/node": "^18.0.6",
     "@whiskeysockets/baileys": "^v7.0.0-rc.4",
     "awesome-phonenumber": "^5.9.0",
-    "axios": "^1.8.4",
+    "axios": "^1.7.7",
     "chalk": "^4.1.2",
     "cheerio": "^1.0.0-rc.12",
     "cookie": "^0.5.0",
