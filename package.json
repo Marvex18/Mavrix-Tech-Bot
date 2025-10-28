@@ -9,6 +9,8 @@
     "cleanup": "node cleanup.js",
     "reset-session": "node reset-session.js",
     "start:clean": "npm run cleanup && npm run start:optimized",
+     "update:auto": "node --max-old-space-size=256 index.js --auto-update",
+    "update:check": "node commands/update.js --check"
     "start:fresh": "npm run reset-session && npm start",
     "install:panel": "npm install --legacy-peer-deps",
     "install:force": "npm install --force",
