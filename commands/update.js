@@ -1,291 +1,224 @@
-const { exec } = require('child_process');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
-const settings = require('../settings');
+const { exec } = require('child_process');
+const chalk = require('chalk');
 
-// ASCII Art for Update System
-const UPDATE_ASCII = `
-╔══════════════════════════════╗
-║    🚀 MAVRIX BOT PREMIUM    ║
-║       UPDATE SYSTEM         ║
-║    🔒 Mavrix Tech © 2025    ║
-╚══════════════════════════════╝
-`;
+// Premium ASCII Art
+const ASCII_ART = {
+    banner: `
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║  ███╗   ███╗ █████╗ ██╗   ██╗██████╗ ██╗██╗  ██╗███████╗     ║
+║  ████╗ ████║██╔══██╗██║   ██║██╔══██╗██║╚██╗██╔╝██╔════╝     ║
+║  ██╔████╔██║███████║██║   ██║██████╔╝██║ ╚███╔╝ █████╗       ║
+║  ██║╚██╔╝██║██╔══██║╚██╗ ██╔╝██╔══██╗██║ ██╔██╗ ██╔══╝       ║
+║  ██║ ╚═╝ ██║██║  ██║ ╚████╔╝ ██║  ██║██║██╔╝ ██╗███████╗     ║
+║  ╚═╝     ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚══════╝     ║
+║                                                                ║
+║              🤖 P R E M I U M  U P D A T E R 🚀               ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+    `,
+    checking: `
+╔════════════════════════════════════════════════════════════════╗
+║ 🔍 CHECKING FOR UPDATES...                                    ║
+║                                                                ║
+║    📡 Contacting GitHub Repository...                         ║
+║    ⏳ Please wait while we check for new updates...           ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+    `,
+    updateFound: `
+╔════════════════════════════════════════════════════════════════╗
+║ 🎉 NEW UPDATE FOUND!                                          ║
+║                                                                ║
+║    ⬇️  Downloading latest version...                         ║
+║    📦 Preparing installation...                              ║
+║    🔄 Updating your bot...                                   ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+    `,
+    noUpdate: `
+╔════════════════════════════════════════════════════════════════╗
+║ ✅ YOU'RE UP TO DATE!                                         ║
+║                                                                ║
+║    🎊 Running latest version!                                ║
+║    ⭐ No updates available at this time.                     ║
+║    💫 Your bot is premium and updated!                       ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+    `,
+    success: `
+╔════════════════════════════════════════════════════════════════╗
+║ 🎊 UPDATE COMPLETED SUCCESSFULLY!                            ║
+║                                                                ║
+║    ✅ Files updated successfully                             ║
+║    🔄 Restarting bot system...                               ║
+║    🚀 Ready for premium performance!                         ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+    `,
+    error: `
+╔════════════════════════════════════════════════════════════════╗
+║ ❌ UPDATE FAILED                                              ║
+║                                                                ║
+║    ⚠️  An error occurred during update                      ║
+║    🔧 Please check your connection and try again            ║
+║    📞 Contact support if issue persists                     ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+    `
+};
 
-function run(cmd) {
+const GITHUB_OWNER = 'Marvex18';
+const GITHUB_REPO = 'Mavrix-Tech-Bot';
+const BRANCH = 'main';
+const API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/commits/${BRANCH}`;
+
+function runCommand(cmd) {
     return new Promise((resolve, reject) => {
-        exec(cmd, { windowsHide: true }, (err, stdout, stderr) => {
-            if (err) return reject(new Error((stderr || stdout || err.message || '').toString()));
-            resolve((stdout || '').toString());
+        exec(cmd, (err, stdout, stderr) => {
+            if (err) return reject(stderr || stdout);
+            resolve(stdout);
         });
     });
 }
 
-async function hasGitRepo() {
-    const gitDir = path.join(process.cwd(), '.git');
-    if (!fs.existsSync(gitDir)) return false;
-    try {
-        await run('git --version');
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-async function updateViaGit() {
-    const oldRev = (await run('git rev-parse HEAD').catch(() => 'unknown')).trim();
-    await run('git fetch --all --prune');
-    const newRev = (await run('git rev-parse origin/main')).trim();
-    const alreadyUpToDate = oldRev === newRev;
-    const commits = alreadyUpToDate ? '' : await run(`git log --pretty=format:"%h %s (%an)" ${oldRev}..${newRev}`).catch(() => '');
-    const files = alreadyUpToDate ? '' : await run(`git diff --name-status ${oldRev} ${newRev}`).catch(() => '');
-    await run(`git reset --hard ${newRev}`);
-    await run('git clean -fd');
-    return { oldRev, newRev, alreadyUpToDate, commits, files };
-}
-
-function downloadFile(url, dest, visited = new Set()) {
+function getLatestCommit() {
     return new Promise((resolve, reject) => {
-        try {
-            // Avoid infinite redirect loops
-            if (visited.has(url) || visited.size > 5) {
-                return reject(new Error('🔄 Too many redirects detected'));
-            }
-            visited.add(url);
-
-            const useHttps = url.startsWith('https://');
-            const client = useHttps ? require('https') : require('http');
-            const req = client.get(url, {
-                headers: {
-                    'User-Agent': 'Mavrix-Bot-Updater/2.0-Premium',
-                    'Accept': '*/*'
-                },
-                timeout: 60000
-            }, res => {
-                // Handle redirects
-                if ([301, 302, 303, 307, 308].includes(res.statusCode)) {
-                    const location = res.headers.location;
-                    if (!location) return reject(new Error(`🔄 HTTP ${res.statusCode} without Location header`));
-                    const nextUrl = new URL(location, url).toString();
-                    res.resume();
-                    return downloadFile(nextUrl, dest, visited).then(resolve).catch(reject);
+        https.get(API_URL, {
+            headers: { 'User-Agent': 'Mavrix-Premium-Bot' }
+        }, res => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    const commitInfo = JSON.parse(data);
+                    resolve({
+                        sha: commitInfo.sha,
+                        message: commitInfo.commit?.message || 'No message',
+                        author: commitInfo.commit?.author?.name || 'Unknown',
+                        date: commitInfo.commit?.author?.date || new Date().toISOString()
+                    });
+                } catch (e) {
+                    reject('Failed to parse GitHub API response');
                 }
-
-                if (res.statusCode !== 200) {
-                    return reject(new Error(`❌ HTTP Error: ${res.statusCode}`));
-                }
-
-                const file = fs.createWriteStream(dest);
-                res.pipe(file);
-                file.on('finish', () => file.close(resolve));
-                file.on('error', err => {
-                    try { file.close(() => {}); } catch {}
-                    fs.unlink(dest, () => reject(err));
-                });
             });
-            req.on('error', err => {
-                fs.unlink(dest, () => reject(err));
-            });
-            req.on('timeout', () => {
-                req.destroy();
-                reject(new Error('⏰ Download timeout'));
-            });
-        } catch (e) {
-            reject(e);
-        }
+        }).on('error', reject);
     });
 }
 
-async function extractZip(zipPath, outDir) {
-    // Try to use platform tools; no extra npm modules required
-    if (process.platform === 'win32') {
-        const cmd = `powershell -NoProfile -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${outDir.replace(/\\/g, '/')}' -Force"`;
-        await run(cmd);
-        return;
-    }
-    // Linux/mac: try unzip, else 7z, else busybox unzip
+async function updateCommand(sock, chatId, message, senderIsSudo, zipArg = '') {
     try {
-        await run('command -v unzip');
-        await run(`unzip -o '${zipPath}' -d '${outDir}'`);
-        return;
-    } catch {}
-    try {
-        await run('command -v 7z');
-        await run(`7z x -y '${zipPath}' -o'${outDir}'`);
-        return;
-    } catch {}
-    try {
-        await run('busybox unzip -h');
-        await run(`busybox unzip -o '${zipPath}' -d '${outDir}'`);
-        return;
-    } catch {}
-    throw new Error("❌ No system unzip tool found (unzip/7z/busybox). Git mode is recommended.");
-}
-
-function copyRecursive(src, dest, ignore = [], relative = '', outList = []) {
-    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
-    for (const entry of fs.readdirSync(src)) {
-        if (ignore.includes(entry)) continue;
-        const s = path.join(src, entry);
-        const d = path.join(dest, entry);
-        const stat = fs.lstatSync(s);
-        if (stat.isDirectory()) {
-            copyRecursive(s, d, ignore, path.join(relative, entry), outList);
-        } else {
-            fs.copyFileSync(s, d);
-            if (outList) outList.push(path.join(relative, entry).replace(/\\/g, '/'));
+        // Check if user has permission (owner or sudo)
+        if (!senderIsSudo && !message.key.fromMe) {
+            await sock.sendMessage(chatId, { 
+                text: '❌ *Access Denied*\n\nThis command is only available for bot owners and sudo users.' 
+            }, { quoted: message });
+            return;
         }
-    }
-}
 
-async function updateViaZip(sock, chatId, message, zipOverride) {
-    const zipUrl = (zipOverride || settings.updateZipUrl || process.env.UPDATE_ZIP_URL || '').trim();
-    if (!zipUrl) {
-        throw new Error('❌ No ZIP URL configured. Set settings.updateZipUrl or UPDATE_ZIP_URL environment variable.');
-    }
-    
-    const tmpDir = path.join(process.cwd(), 'tmp');
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-    const zipPath = path.join(tmpDir, 'update.zip');
-    
-    // Send download progress
-    await sock.sendMessage(chatId, {
-        text: '📥 *DOWNLOADING UPDATE*\n\n⬇️ Downloading latest version from Mavrix servers...'
-    }, { quoted: message });
-    
-    await downloadFile(zipUrl, zipPath);
-    
-    await sock.sendMessage(chatId, {
-        text: '📦 *EXTRACTING FILES*\n\n🗂️ Extracting update package...'
-    }, { quoted: message });
-    
-    const extractTo = path.join(tmpDir, 'update_extract');
-    if (fs.existsSync(extractTo)) fs.rmSync(extractTo, { recursive: true, force: true });
-    await extractZip(zipPath, extractTo);
+        // Send premium banner
+        await sock.sendMessage(chatId, { 
+            text: `\`\`\`${ASCII_ART.banner}\`\`\`\n*🤖 Mavrix Premium Auto-Updater*\n\n🔧 *Initializing update process...*` 
+        }, { quoted: message });
 
-    // Find the top-level extracted folder
-    const [root] = fs.readdirSync(extractTo).map(n => path.join(extractTo, n));
-    const srcRoot = fs.existsSync(root) && fs.lstatSync(root).isDirectory() ? root : extractTo;
+        // Check for updates
+        await sock.sendMessage(chatId, { 
+            text: `\`\`\`${ASCII_ART.checking}\`\`\`\n*🔍 Checking for updates...*` 
+        });
 
-    // Copy over while preserving runtime dirs/files
-    const ignore = ['node_modules', '.git', 'session', 'tmp', 'tmp/', 'temp', 'data', 'baileys_store.json'];
-    const copied = [];
-    
-    // Preserve ownerNumber from existing settings.js if present
-    let preservedOwner = null;
-    let preservedBotOwner = null;
-    try {
-        const currentSettings = require('../settings');
-        preservedOwner = currentSettings && currentSettings.ownerNumber ? String(currentSettings.ownerNumber) : null;
-        preservedBotOwner = currentSettings && currentSettings.botOwner ? String(currentSettings.botOwner) : null;
-    } catch {}
-    
-    await sock.sendMessage(chatId, {
-        text: '🔄 *APPLYING UPDATE*\n\n⚡ Copying new files and preserving configuration...'
-    }, { quoted: message });
-    
-    copyRecursive(srcRoot, process.cwd(), ignore, '', copied);
-    
-    if (preservedOwner) {
+        const cachePath = path.join(__dirname, '../data/last_commit.txt');
+        const oldCommit = fs.existsSync(cachePath) ? fs.readFileSync(cachePath, 'utf8').trim() : '';
+
+        let latestCommit;
         try {
-            const settingsPath = path.join(process.cwd(), 'settings.js');
-            if (fs.existsSync(settingsPath)) {
-                let text = fs.readFileSync(settingsPath, 'utf8');
-                text = text.replace(/ownerNumber:\s*'[^']*'/, `ownerNumber: '${preservedOwner}'`);
-                if (preservedBotOwner) {
-                    text = text.replace(/botOwner:\s*'[^']*'/, `botOwner: '${preservedBotOwner}'`);
-                }
-                fs.writeFileSync(settingsPath, text);
-            }
-        } catch {}
-    }
-    
-    // Cleanup
-    try { fs.rmSync(extractTo, { recursive: true, force: true }); } catch {}
-    try { fs.rmSync(zipPath, { force: true }); } catch {}
-    
-    return { copiedFiles: copied };
-}
-
-async function restartProcess(sock, chatId, message) {
-    try {
-        await sock.sendMessage(chatId, { 
-            text: '🔄 *RESTARTING SYSTEM*\n\n✅ Update complete! Restarting Mavrix Bot...' 
-        }, { quoted: message });
-    } catch {}
-    
-    try {
-        // Preferred: PM2
-        await run('pm2 restart all');
-        return;
-    } catch {}
-    
-    // Exit after a short delay to allow the above message to flush.
-    setTimeout(() => {
-        process.exit(0);
-    }, 1000);
-}
-
-async function updateCommand(sock, chatId, message, senderIsSudo, zipOverride) {
-    if (!message.key.fromMe && !senderIsSudo) {
-        await sock.sendMessage(chatId, { 
-            text: '🚫 *ACCESS DENIED*\n\nOnly Mavrix Bot Owner can perform updates! 🔒' 
-        }, { quoted: message });
-        return;
-    }
-    
-    try {
-        // Premium Update Header
-        await sock.sendMessage(chatId, { 
-            text: `${UPDATE_ASCII}\n🔄 *INITIATING UPDATE PROCESS*\n\n⚡ Checking for updates...` 
-        }, { quoted: message });
-        
-        if (await hasGitRepo()) {
-            const { oldRev, newRev, alreadyUpToDate, commits, files } = await updateViaGit();
-            
-            if (alreadyUpToDate) {
-                await sock.sendMessage(chatId, { 
-                    text: `✅ *ALREADY UP TO DATE*\n\n🟢 Your Mavrix Bot is running the latest version!\n\n🔒 No updates required.` 
-                }, { quoted: message });
-                return;
-            }
-            
+            latestCommit = await getLatestCommit();
+        } catch (error) {
             await sock.sendMessage(chatId, { 
-                text: `📥 *UPDATING FROM GIT*\n\n🔄 Installing dependencies...` 
+                text: `\`\`\`${ASCII_ART.error}\`\`\`\n*❌ Network Error*\n\nFailed to connect to GitHub. Please check your internet connection.` 
             }, { quoted: message });
-            
-            await run('npm install --no-audit --no-fund');
-        } else {
-            const { copiedFiles } = await updateViaZip(sock, chatId, message, zipOverride);
+            return;
+        }
+
+        // Check if update is needed
+        if (latestCommit.sha === oldCommit) {
             await sock.sendMessage(chatId, { 
-                text: `📦 *ZIP UPDATE COMPLETE*\n\n✅ Successfully updated ${copiedFiles.length} files!` 
+                text: `\`\`\`${ASCII_ART.noUpdate}\`\`\`\n*✅ You're Up to Date!*\n\n📅 *Last Check:* ${new Date().toLocaleString()}\n🔐 *Status:* Running Latest Version\n⭐ *Your Mavrix Bot is premium and updated!*` 
+            }, { quoted: message });
+            return;
+        }
+
+        // Update available - proceed with installation
+        await sock.sendMessage(chatId, { 
+            text: `\`\`\`${ASCII_ART.updateFound}\`\`\`\n*🎉 New Update Available!*\n\n📦 *Version:* ${latestCommit.sha.slice(0, 7)}\n👤 *Author:* ${latestCommit.author}\n📝 *Message:* ${latestCommit.message}\n⏳ *Installing update...*` 
+        });
+
+        // Perform git pull or alternative update method
+        try {
+            // Method 1: Try git pull first
+            await runCommand('git pull origin main');
+            
+            // Update npm dependencies
+            await sock.sendMessage(chatId, { 
+                text: '📦 *Updating dependencies...*\n\nInstalling latest packages...' 
+            });
+            await runCommand('npm install --legacy-peer-deps');
+
+            // Save the new commit hash
+            fs.writeFileSync(cachePath, latestCommit.sha);
+
+            // Success message
+            await sock.sendMessage(chatId, { 
+                text: `\`\`\`${ASCII_ART.success}\`\`\`\n*🎊 Update Completed!*\n\n✅ *New Version:* ${latestCommit.sha.slice(0, 7)}\n👤 *Changes by:* ${latestCommit.author}\n📝 *Update:* ${latestCommit.message}\n🔄 *Restarting in 5 seconds...*\n\n⭐ *Thank you for using Mavrix Premium!*` 
+            }, { quoted: message });
+
+            // Restart the bot
+            setTimeout(() => {
+                console.log(chalk.green.bold('🔄 Premium Update Complete - Restarting Bot...'));
+                process.exit(0);
+            }, 5000);
+
+        } catch (gitError) {
+            // If git pull fails, provide manual update instructions
+            await sock.sendMessage(chatId, { 
+                text: `\`\`\`${ASCII_ART.error}\`\`\`\n*❌ Automatic Update Failed*\n\n🔧 *Error:* ${gitError.message || gitError}\n\n💡 *Manual Update Required:*\n1. Go to your server terminal\n2. Run: \\\`git pull origin main\\\`\n3. Run: \\\`npm install\\\`\n4. Restart the bot manually\n\n📞 Contact support if issues persist.` 
             }, { quoted: message });
         }
-        
-        await restartProcess(sock, chatId, message);
-        
-    } catch (err) {
-        console.error('❌ Update failed:', err);
+
+    } catch (error) {
+        console.error('❌ Update command error:', error);
         await sock.sendMessage(chatId, { 
-            text: `❌ *UPDATE FAILED*
-
-╔══════════════════════════════╗
-║         UPDATE ERROR         ║
-╚══════════════════════════════╝
-
-🚨 *Error Details:*
-${String(err.message || err)}
-
-💡 *Possible Solutions:*
-┣ 🔹 Check internet connection
-┣ 🔹 Verify update source
-┣ 🔹 Check file permissions
-┣ 🔹 Contact Mavrix Support
-
-🔒 *Mavrix Tech - Premium Support*` 
+            text: `\`\`\`${ASCII_ART.error}\`\`\`\n*❌ Update Process Failed*\n\n📛 *Error:* ${error.message || error}\n🔧 *Please try again or contact support.*` 
         }, { quoted: message });
     }
 }
 
-module.exports = updateCommand;
+// Auto-update checker (runs every 6 hours)
+function startAutoUpdateChecker(sock) {
+    setInterval(async () => {
+        try {
+            const cachePath = path.join(__dirname, '../data/last_commit.txt');
+            const oldCommit = fs.existsSync(cachePath) ? fs.readFileSync(cachePath, 'utf8').trim() : '';
+            const latestCommit = await getLatestCommit();
+            
+            if (latestCommit.sha !== oldCommit) {
+                // Notify owner about available update
+                const settings = require('../settings');
+                const ownerJid = settings.ownerNumber + '@s.whatsapp.net';
+                
+                await sock.sendMessage(ownerJid, { 
+                    text: `🎉 *Premium Update Available!*\n\n📦 New version ready for installation!\n💫 Use *.update* to install automatically\n🔧 *Version:* ${latestCommit.sha.slice(0, 7)}\n👤 *Author:* ${latestCommit.author}\n📝 *Changes:* ${latestCommit.message}\n\n⭐ Keep your Mavrix Bot premium and updated!` 
+                });
+            }
+        } catch (error) {
+            console.error('Auto-update check failed:', error);
+        }
+    }, 6 * 60 * 60 * 1000); // 6 hours
+}
+
+module.exports = {
+    updateCommand,
+    startAutoUpdateChecker
+};
