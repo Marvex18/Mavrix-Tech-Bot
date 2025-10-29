@@ -6,7 +6,7 @@
  * it under the terms of the MIT License.
  * 
  * Credits:
- * - Baileys Library by @adiwajshing
+ * - Baileys Library by @whiskeysockets
  * - Pair Code implementation inspired by TechGod143 & DGXEON
  */
 
@@ -70,32 +70,6 @@ setInterval(() => {
     }
 }, 30000)
 
-// 🧩 Store implementation (fixed & fallback safe)
-let makeInMemoryStore
-try {
-    ({ makeInMemoryStore } = require("@whiskeysockets/baileys/lib/store"))
-} catch {
-    try {
-        makeInMemoryStore = require("@whiskeysockets/baileys").makeInMemoryStore
-    } catch {
-        console.error(chalk.red('❌ Failed to import makeInMemoryStore, using fallback store'))
-        makeInMemoryStore = () => ({
-            bind: () => console.log('Store bound (fallback mode)'),
-            contacts: {},
-            chats: {},
-            messages: {},
-            loadMessage: async () => null,
-            saveMessage: async () => {},
-            toJSON: () => ({})
-        })
-    }
-}
-
-// ✅ FIXED LINE HERE
-const store = makeInMemoryStore({
-    logger: pino().child({ level: 'silent', stream: 'store' })
-})
-
 const settings = require('./settings')
 
 let phoneNumber = process.env.PHONE_NUMBER || "911234567890"
@@ -152,19 +126,18 @@ async function startMavrixBot() {
             syncFullHistory: false,
             msgRetryCounterCache,
             defaultQueryTimeoutMs: 60000,
-            getMessage: async (key) => {
-                try {
-                    const jid = jidNormalizedUser(key.remoteJid)
-                    const msg = await store.loadMessage(jid, key.id)
-                    return msg?.message || ""
-                } catch {
-                    return ""
-                }
-            }
+            getMessage: async (key) => ""
         })
 
-        store.bind(MavrixBot.ev)
+        // 🧩 Dummy store for Baileys v7 (no makeInMemoryStore anymore)
+        const store = {
+            loadMessage: async () => null,
+            contacts: {},
+            chats: {},
+            messages: {}
+        }
 
+        // 🌐 Message handler
         MavrixBot.ev.on('messages.upsert', async (chatUpdate) => {
             try {
                 const mek = chatUpdate.messages[0]
@@ -185,15 +158,41 @@ async function startMavrixBot() {
             }
         })
 
+        // 🧩 Contact updates
         MavrixBot.ev.on('contacts.update', (update) => {
             for (let contact of update) {
-                const id = MavrixBot.decodeJid(contact.id)
+                const id = contact.id
                 store.contacts[id] = { id, name: contact.notify }
             }
         })
 
-        MavrixBot.public = true
-        MavrixBot.serializeM = (m) => smsg(MavrixBot, m, store)
+        // 📡 Connection handling
+        MavrixBot.ev.on('connection.update', async (s) => {
+            const { connection, lastDisconnect } = s
+            if (connection === "open") {
+                console.log(chalk.greenBright('✅ Premium Bot Connected Successfully!'))
+            }
+            if (connection === "close") {
+                const statusCode = lastDisconnect?.error?.output?.statusCode
+                console.log(chalk.yellow(`Connection closed. Status: ${statusCode}`))
+
+                if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
+                    try {
+                        rmSync('./session', { recursive: true, force: true })
+                        console.log(chalk.red('Session logged out. Cleaning session folder.'))
+                    } catch (e) {
+                        console.log(chalk.red('Error cleaning session folder:', e.message))
+                    }
+                    console.log(chalk.red('Session logged out. Please re-authenticate.'))
+                    setTimeout(startMavrixBot, 5000)
+                } else {
+                    console.log(chalk.yellow('Connection closed, attempting reconnect...'))
+                    setTimeout(startMavrixBot, 5000)
+                }
+            }
+        })
+
+        // 🧠 Other handlers
         MavrixBot.ev.on('creds.update', saveCreds)
         MavrixBot.ev.on('group-participants.update', async (update) => {
             await handleGroupParticipantUpdate(MavrixBot, update)
@@ -209,12 +208,14 @@ async function startMavrixBot() {
     }
 }
 
+// 🚀 Start the bot
 startMavrixBot().catch(error => {
     console.error('Failed to start bot:', error)
     console.log('Restarting in 10 seconds...')
     setTimeout(startMavrixBot, 10000)
 })
 
+// 🛡️ Global error handlers
 process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err)
     console.log('Restarting bot...')
@@ -225,6 +226,7 @@ process.on('unhandledRejection', (err) => {
     console.error('Unhandled Rejection:', err)
 })
 
+// ♻️ Auto-reload on file change
 let file = require.resolve(__filename)
 fs.watchFile(file, () => {
     fs.unwatchFile(file)
