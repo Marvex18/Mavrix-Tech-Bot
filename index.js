@@ -59,7 +59,6 @@ const chalk = require('chalk')
 const FileType = require('file-type')
 const path = require('path')
 const axios = require('axios')
-const { handleMessages, handleGroupParticipantUpdate, handleStatus } = require('./main');
 const PhoneNumber = require('awesome-phonenumber')
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require('./lib/exif')
 const { smsg, isUrl, generateMessageTag, getBuffer, getSizeMedia, fetch, sleep, reSize } = require('./lib/myfunc')
@@ -101,19 +100,33 @@ class PremiumUpdater {
             const https = require('https');
             return new Promise((resolve, reject) => {
                 https.get(this.API_URL, {
-                    headers: { 'User-Agent': 'Mavrix-Premium-Bot' }
+                    headers: { 
+                        'User-Agent': 'Mavrix-Premium-Bot',
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
                 }, res => {
+                    if (res.statusCode === 404) {
+                        return reject('Repository or branch not found');
+                    }
+                    if (res.statusCode === 403) {
+                        return reject('GitHub API rate limit exceeded');
+                    }
+                    
                     let data = '';
                     res.on('data', chunk => data += chunk);
                     res.on('end', () => {
                         try {
                             const commitInfo = JSON.parse(data);
-                            resolve({
-                                sha: commitInfo.sha,
-                                message: commitInfo.commit?.message || 'No message',
-                                author: commitInfo.commit?.author?.name || 'Unknown',
-                                date: commitInfo.commit?.author?.date
-                            });
+                            if (commitInfo.sha) {
+                                resolve({
+                                    sha: commitInfo.sha,
+                                    message: commitInfo.commit?.message || 'No message',
+                                    author: commitInfo.commit?.author?.name || 'Unknown',
+                                    date: commitInfo.commit?.author?.date
+                                });
+                            } else {
+                                reject('Invalid GitHub response');
+                            }
                         } catch (e) {
                             reject('Failed to parse GitHub response');
                         }
@@ -170,7 +183,15 @@ if (global.gc) {
         global.gc();
         console.log(chalk.blue('🧹 Premium Memory cleaned'));
     }, 60000);
+} else {
+    console.log(chalk.yellow('⚠️ Garbage collector not enabled. Start node with --expose-gc for memory optimization'));
 }
+
+// Restart guard to prevent infinite loops
+let restartCount = 0;
+let lastRestartTime = 0;
+const MAX_RESTARTS = 5;
+const RESTART_WINDOW = 60000; // 1 minute
 
 // Restart if memory gets too high
 setInterval(() => {
@@ -213,7 +234,13 @@ const settings = require('./settings')
 let phoneNumber = process.env.PHONE_NUMBER || "911234567890"
 let owner = []
 
+// Ensure data directory exists
 try {
+    if (!fs.existsSync('./data')) {
+        fs.mkdirSync('./data', { recursive: true });
+        console.log(chalk.green('📁 Created data directory'));
+    }
+
     if (fs.existsSync('./data/owner.json')) {
         const ownerData = JSON.parse(fs.readFileSync('./data/owner.json'))
         owner = Array.isArray(ownerData) ? ownerData : [ownerData]
@@ -230,7 +257,8 @@ global.botname = "Mavrix Bot Premium"
 global.themeemoji = "💎"
 global.channelLink = "https://whatsapp.com/channel/0029Va4K0PZ5a245NkngBA2M"
 
-const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code")
+// 🎯 FIXED: Pairing code logic
+const pairingCode = process.argv.includes("--pairing-code")
 const useMobile = process.argv.includes("--mobile")
 
 const rl = process.stdin.isTTY ? readline.createInterface({ input: process.stdin, output: process.stdout }) : null
@@ -287,21 +315,27 @@ async function startMavrixBot() {
         // 🎯 INITIALIZE PREMIUM UPDATER
         const premiumUpdater = new PremiumUpdater();
 
-        // Message handling
+        // 🎯 FIXED: Single messages.upsert handler with merged logic
         MavrixBot.ev.on('messages.upsert', async chatUpdate => {
             try {
                 const mek = chatUpdate.messages[0]
                 if (!mek.message) return
                 
+                // Handle status updates first
+                if (mek.key && mek.key.remoteJid === 'status@broadcast') {
+                    try {
+                        const { handleStatus } = require('./main');
+                        await handleStatus(MavrixBot, chatUpdate);
+                    } catch (error) {
+                        console.error("Status handler not available:", error);
+                    }
+                    return;
+                }
+                
                 mek.message = (Object.keys(mek.message)[0] === 'ephemeralMessage') 
                     ? mek.message.ephemeralMessage.message 
                     : mek.message
                     
-                if (mek.key && mek.key.remoteJid === 'status@broadcast') {
-                    await handleStatus(MavrixBot, chatUpdate);
-                    return;
-                }
-                
                 if (!MavrixBot.public && !mek.key.fromMe && chatUpdate.type === 'notify') return
                 if (mek.key.id.startsWith('BAE5') && mek.key.id.length === 16) return
 
@@ -312,6 +346,7 @@ async function startMavrixBot() {
                 }
 
                 try {
+                    const { handleMessages } = require('./main');
                     await handleMessages(MavrixBot, chatUpdate, true)
                 } catch (err) {
                     console.error("Error in handleMessages:", err)
@@ -421,7 +456,7 @@ async function startMavrixBot() {
                 try {
                     // Check for updates on startup
                     const updateInfo = await premiumUpdater.checkForUpdates();
-                    if (updateInfo) {
+                    if (updateInfo?.sha) {
                         console.log(chalk.hex('#FF6B6B')(`🎉 Update Available: ${updateInfo.sha.slice(0, 7)} by ${updateInfo.author}`));
                         
                         // Notify owner
@@ -440,7 +475,7 @@ async function startMavrixBot() {
                         });
                     }
                 } catch (error) {
-                    console.log(chalk.yellow('⚠️  Update check skipped'));
+                    console.log(chalk.yellow('⚠️  Update check skipped:', error.message));
                 }
 
                 const botNumber = MavrixBot.user.id.split(':')[0] + '@s.whatsapp.net';
@@ -467,6 +502,10 @@ async function startMavrixBot() {
                 console.log(chalk.hex('#00FFAA')(`${global.themeemoji || '💎'} 🤖 Premium Bot Connected Successfully! ✅`))
                 console.log(chalk.hex('#00D4FF')(`Bot Version: ${settings.version}`))
                 console.log(chalk.hex('#FFD700')(`${global.themeemoji || '💎'} 🔄 Auto-update system: ACTIVE`))
+                
+                // Reset restart counter on successful connection
+                restartCount = 0;
+                lastRestartTime = 0;
             }
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode
@@ -499,7 +538,15 @@ async function startMavrixBot() {
 
         MavrixBot.ev.on('call', async (calls) => {
             try {
-                const { readState: readAnticallState } = require('./commands/anticall');
+                let readAnticallState;
+                try {
+                    const anticallModule = require('./commands/anticall');
+                    readAnticallState = anticallModule.readState;
+                } catch (error) {
+                    console.log('Anticall module not available');
+                    return;
+                }
+                
                 const state = readAnticallState();
                 if (!state.enabled) return;
                 
@@ -544,13 +591,11 @@ async function startMavrixBot() {
         MavrixBot.ev.on('creds.update', saveCreds)
 
         MavrixBot.ev.on('group-participants.update', async (update) => {
-            await handleGroupParticipantUpdate(MavrixBot, update);
-        });
-
-        // Status handler
-        MavrixBot.ev.on('messages.upsert', async (m) => {
-            if (m.messages[0].key && m.messages[0].key.remoteJid === 'status@broadcast') {
-                await handleStatus(MavrixBot, m);
+            try {
+                const { handleGroupParticipantUpdate } = require('./main');
+                await handleGroupParticipantUpdate(MavrixBot, update);
+            } catch (error) {
+                console.error("Group participant update handler not available:", error);
             }
         });
 
@@ -569,8 +614,30 @@ async function startMavrixBot() {
     }
 }
 
+// Enhanced start function with restart guard
+async function startBotWithGuard() {
+    const now = Date.now();
+    
+    // Check if we're restarting too frequently
+    if (now - lastRestartTime < RESTART_WINDOW) {
+        restartCount++;
+    } else {
+        restartCount = 1;
+    }
+    lastRestartTime = now;
+    
+    if (restartCount > MAX_RESTARTS) {
+        console.log(chalk.red(`🚨 Too many restarts (${restartCount}), waiting 30 seconds before next attempt...`));
+        setTimeout(startMavrixBot, 30000);
+        return;
+    }
+    
+    console.log(chalk.yellow(`🔄 Restart attempt ${restartCount}/${MAX_RESTARTS}`));
+    await startMavrixBot();
+}
+
 // Start the bot with error handling
-startMavrixBot().catch(error => {
+startBotWithGuard().catch(error => {
     console.error('Failed to start bot:', error)
     
     // 🎯 CLEAR AUTO-UPDATE INTERVAL ON STARTUP ERROR
@@ -580,7 +647,7 @@ startMavrixBot().catch(error => {
     }
     
     console.log('Restarting in 10 seconds...')
-    setTimeout(startMavrixBot, 10000)
+    setTimeout(startBotWithGuard, 10000)
 })
 
 process.on('uncaughtException', (err) => {
@@ -593,7 +660,7 @@ process.on('uncaughtException', (err) => {
     }
     
     console.log('Restarting bot...')
-    setTimeout(startMavrixBot, 5000)
+    setTimeout(startBotWithGuard, 5000)
 })
 
 process.on('unhandledRejection', (err) => {
