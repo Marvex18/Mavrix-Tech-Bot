@@ -202,31 +202,32 @@ setInterval(() => {
     }
 }, 30000);
 
-// Store implementation
+// ✅ Safe Memory Store Setup (works on latest Baileys)
 let makeInMemoryStore;
 try {
-    ({ makeInMemoryStore } = require("@whiskeysockets/baileys/lib/store"));
-} catch (error) {
+    // Try standard export first (newer Baileys)
+    ({ makeInMemoryStore } = require("@whiskeysockets/baileys"));
+} catch (err) {
     try {
-        makeInMemoryStore = require("@whiskeysockets/baileys").makeInMemoryStore;
-    } catch (fallbackError) {
-        console.error(chalk.red('❌ Failed to import makeInMemoryStore, using fallback store'));
-        makeInMemoryStore = function() {
-            return {
-                bind: () => console.log('Store bound (fallback mode)'),
-                contacts: {},
-                chats: {},
-                messages: {},
-                loadMessage: async () => null,
-                saveMessage: async () => {},
-                toJSON: () => ({})
-            };
-        };
+        // Try legacy internal path (older Baileys)
+        ({ makeInMemoryStore } = require("@whiskeysockets/baileys/lib/store"));
+    } catch (innerErr) {
+        console.warn(chalk.yellow('⚠️ makeInMemoryStore not found, using minimal fallback store'));
+        makeInMemoryStore = () => ({
+            bind: () => console.log('🧠 Store bound (fallback mode)'),
+            chats: new Map(),
+            messages: new Map(),
+            contacts: new Map(),
+            loadMessage: async () => null,
+            saveMessage: async () => {},
+            toJSON: () => ({})
+        });
     }
 }
 
-const store = makeInMemoryStore({ 
-    logger: pino().child({ level: 'silent', stream: 'store' }) 
+// Initialize store
+const store = makeInMemoryStore({
+    logger: pino({ level: 'silent' }).child({ level: 'silent' })
 });
 
 const settings = require('./settings')
