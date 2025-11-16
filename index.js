@@ -29,7 +29,33 @@ const PREMIUM_BANNER = `
 require('./settings')
 const { Boom } = require('@hapi/boom')
 const fs = require('fs')
-const chalk = require('chalk')
+
+// FIX: Import chalk properly and add fallback
+let chalk;
+try {
+    chalk = require('chalk');
+} catch (error) {
+    console.log('⚠️  chalk not found, using fallback...');
+    // Fallback chalk implementation
+    chalk = {
+        blue: (text) => `\x1b[34m${text}\x1b[0m`,
+        red: (text) => `\x1b[31m${text}\x1b[0m`,
+        yellow: (text) => `\x1b[33m${text}\x1b[0m`,
+        green: (text) => `\x1b[32m${text}\x1b[0m`,
+        cyan: (text) => `\x1b[36m${text}\x1b[0m`,
+        hex: (color) => (text) => text, // Simple fallback for hex colors
+        bold: {
+            hex: (color) => (text) => text
+        },
+        bgBlack: (text) => `\x1b[40m${text}\x1b[0m`,
+        black: (text) => `\x1b[30m${text}\x1b[0m`,
+        bgGreen: (text) => `\x1b[42m${text}\x1b[0m`,
+        white: (text) => `\x1b[37m${text}\x1b[0m`,
+        greenBright: (text) => `\x1b[92m${text}\x1b[0m`,
+        redBright: (text) => `\x1b[91m${text}\x1b[0m`
+    };
+}
+
 const { handleMessages, handleGroupParticipantUpdate, handleStatus } = require('./main');
 const PhoneNumber = require('awesome-phonenumber')
 const { smsg } = require('./lib/myfunc')
