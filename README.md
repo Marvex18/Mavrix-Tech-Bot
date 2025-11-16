@@ -237,25 +237,22 @@ Updates ✅ Auto-Update ❌ Manual
 
 <div align="center">
 
-🎊 READY TO TRANSFORM YOUR BUSINESS?
+🎊 READY TO TRANSFORM YOUR ## 🎊 **READY TO TRANSFORM YOUR BUSINESS?**
 
-Join thousands of satisfied businesses using Mavrix Bot
+### **Join thousands of satisfied businesses using Mavrix Bot**
 
-https://readme-typing-svg.herokuapp.com/?font=Righteous&size=25&center=true&vCenter=true&width=500&height=70&duration=4000&lines=🚀+Start+Today+;💎+Go+Premium+;🤖+Automate+Everything+;🎯+Business+Excellence
+![Footer](https://readme-typing-svg.herokuapp.com/?font=Righteous&size=25&center=true&vCenter=true&width=500&height=70&duration=4000&lines=🚀+Start+Today+;💎+Go+Premium+;🤖+Automate+Everything+;🎯+Business+Excellence)
 
-⭐ Star the repository if you love Mavrix Bot!
+**⭐ Star the repository if you love Mavrix Bot!**
 
-https://img.shields.io/github/stars/Marvex18/Mavrix-Tech-Bot?style=social
-
-</div>
+![Stars](https://img.shields.io/github/stars/Marvex18/Mavrix-Tech-Bot?style=social)
 
 ---
 
 <div align="center">
 
-🔮 BUILT WITH ❤️ BY MAVRIX TECH
+### **🔮 BUILT WITH ❤️ BY MAVRIX TECH**
 
-https://img.shields.io/badge/©_2025_Mavrix_Tech-FF6B6B?style=for-the-badge&logo=starship&logoColor=white
+![Mavrix Tech](https://img.shields.io/badge/©_2025_Mavrix_Tech-FF6B6B?style=for-the-badge&logo=starship&logoColor=white)
 
 </div>
-```
