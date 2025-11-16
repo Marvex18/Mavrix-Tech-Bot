@@ -16,6 +16,30 @@
 </div>
 
 <br>
+## 🎯 **QUICK DEPLOYMENT**
+
+<div align="center">
+
+### **🚀 ONE-CLICK DEPLOYMENT**
+
+<a href="https://github.com/Marvex18/Mavrix-Tech-Bot/fork">
+  <img src="https://img.shields.io/badge/FORK-REPO-black?style=for-the-badge&logo=github&logoColor=white" alt="Fork Repository"/>
+</a>
+
+<a href="https://knight-bot-paircode.onrender.com/">
+  <img src="https://img.shields.io/badge/GET_SESSION-Easy_Method-4A90E2?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Get Session"/>
+</a>
+
+<a href="https://dashboard.katabump.com/auth/login#d6b7d6">
+  <img src="https://img.shields.io/badge/🚀_DEPLOY_ON_KATABUMP-D6B7D6?style=for-the-badge&logo=server&logoColor=black" alt="Deploy on Katabump"/>
+</a>
+
+</div>
+
+<br>
+
+<div align="center">
+
 
 ### **📋 QUICK GUIDE**
 
@@ -54,29 +78,6 @@
 
 ---
 
-## 🎯 **QUICK DEPLOYMENT**
-
-<div align="center">
-
-### **🚀 ONE-CLICK DEPLOYMENT**
-
-<a href="https://github.com/Marvex18/Mavrix-Tech-Bot/fork">
-  <img src="https://img.shields.io/badge/FORK-REPO-black?style=for-the-badge&logo=github&logoColor=white" alt="Fork Repository"/>
-</a>
-
-<a href="https://knight-bot-paircode.onrender.com/">
-  <img src="https://img.shields.io/badge/GET_SESSION-Easy_Method-4A90E2?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Get Session"/>
-</a>
-
-<a href="https://dashboard.katabump.com/auth/login#d6b7d6">
-  <img src="https://img.shields.io/badge/🚀_DEPLOY_ON_KATABUMP-D6B7D6?style=for-the-badge&logo=server&logoColor=black" alt="Deploy on Katabump"/>
-</a>
-
-</div>
-
-<br>
-
-<div align="center">
 
 ### **🎥 VIDEO TUTORIALS**
 
