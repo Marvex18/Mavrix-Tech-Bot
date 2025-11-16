@@ -48,6 +48,22 @@ const pino = require("pino")
 const readline = require("readline")
 const { rmSync } = require('fs')
 
+// Compatibility layer at the very top
+try {
+    require('@whiskeysockets/baileys');
+} catch (error) {
+    console.log('⚠️  Baileys not found, trying to install...');
+    const { execSync } = require('child_process');
+    try {
+        execSync('npm install @whiskeysockets/baileys@6.5.0 --no-save', { stdio: 'inherit' });
+        console.log('✅ Baileys installed successfully');
+    } catch (installError) {
+        console.log('❌ Failed to install Baileys. Bot cannot start.');
+        process.exit(1);
+    }
+}
+
+// Rest of your existing index.js code...
 // Import lightweight store
 const store = require('./lib/lightweight_store')
 
