@@ -16,7 +16,6 @@
 </div>
 
 <br>
-## 🎯 **QUICK DEPLOYMENT**
 
 <div align="center">
 
