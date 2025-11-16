@@ -17,6 +17,22 @@
 
 <br>
 
+### **📋 QUICK GUIDE**
+
+**Step 1 - Fork:** Click "Fork" button above ⬆️
+
+**Step 2 - Get Session:** 
+- Visit [Session Generator](https://knight-bot-paircode.onrender.com/)
+- Follow instructions to get `creds.json`
+- Upload to `session/creds.json` in your forked repo
+
+**Step 3 - Deploy:**
+- Go to [Katabump](https://dashboard.katabump.com/auth/login#d6b7d6)
+- Connect your forked repo
+- Deploy & enjoy! 🚀
+
+<br>
+
 <div align="center">
 
 ## ✨ **PREMIUM FEATURES SHOWCASE**
