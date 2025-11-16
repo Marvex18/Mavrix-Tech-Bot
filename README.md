@@ -52,8 +52,28 @@
   <img src="https://img.shields.io/badge/GET_PAIR_CODE-FF6B6B?style=for-the-badge&logo=replit&logoColor=white" alt="Get Pair Code"/>
 </a>
 
+<a href="https://knight-bot-paircode.onrender.com">
+  <img src="https://img.shields.io/badge/GET_SESSION-Easy_Method-4A90E2?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Get Session"/>
+</a>
+
 <a href="https://dashboard.katabump.com/auth/login#d6b7d6">
   <img src="https://img.shields.io/badge/🚀_DEPLOY_ON_KATABUMP-D6B7D6?style=for-the-badge&logo=server&logoColor=black" alt="Deploy on Katabump"/>
+</a>
+
+</div>
+
+<br>
+
+<div align="center">
+
+### **🎥 VIDEO TUTORIALS**
+
+<a href="https://youtu.be/-oz_u1iMgf8">
+  <img src="https://img.shields.io/badge/Deploy_Tutorial-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Deploy Tutorial"/>
+</a>
+
+<a href="https://bot-hosting.net/?aff=1068419752923508776">
+  <img src="https://img.shields.io/badge/Premium_Hosting-28a745?style=for-the-badge&logo=server&logoColor=white" alt="Premium Hosting"/>
 </a>
 
 </div>
@@ -194,6 +214,36 @@ module.exports = {
 
 ---
 
+🔑 SESSION MANAGEMENT
+
+<div align="center">
+
+📱 GET WHATSAPP SESSION
+
+</div>
+
+Method 1: Pair Code (Recommended)
+
+1. Visit: Pair Code Generator
+2. Follow instructions to get creds.json
+3. Upload to session folder in your bot
+
+Method 2: Easy Session
+
+1. Visit: Easy Session
+2. Get your session files
+3. Upload to your deployment
+
+Method 3: QR Code
+
+1. Run npm start
+2. Scan QR with WhatsApp
+3. Session auto-saves in session folder
+
+<br>
+
+---
+
 🌟 PREMIUM SUPPORT
 
 <div align="center">
@@ -228,6 +278,7 @@ Security ✅ Military Grade ⚠️ Standard
 Performance ✅ 10K+ Users ⚠️ Limited
 Support ✅ 24/7 Premium ⚠️ Community
 Updates ✅ Auto-Update ❌ Manual
+Session Options ✅ Multiple Methods ⚠️ Limited
 
 </div>
 
@@ -237,7 +288,7 @@ Updates ✅ Auto-Update ❌ Manual
 
 <div align="center">
 
-🎊 READY TO TRANSFORM YOUR ## 🎊 **READY TO TRANSFORM YOUR BUSINESS?**
+## 🎊 **READY TO TRANSFORM YOUR BUSINESS?**
 
 ### **Join thousands of satisfied businesses using Mavrix Bot**
 
