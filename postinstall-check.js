@@ -1,12 +1,29 @@
+// postinstall-check.js - No chalk version
 const fs = require('fs');
-const chalk = require('chalk');
 
-console.log(chalk.blue('🔍 Checking installation integrity...'));
+// Simple color system
+const colors = {
+    reset: '\x1b[0m',
+    blue: '\x1b[34m',
+    green: '\x1b[32m',
+    red: '\x1b[31m',
+    yellow: '\x1b[33m',
+    cyan: '\x1b[36m'
+};
+
+const color = {
+    blue: (text) => `${colors.blue}${text}${colors.reset}`,
+    green: (text) => `${colors.green}${text}${colors.reset}`,
+    red: (text) => `${colors.red}${text}${colors.reset}`,
+    yellow: (text) => `${colors.yellow}${text}${colors.reset}`,
+    cyan: (text) => `${colors.cyan}${text}${colors.reset}`
+};
+
+console.log(color.blue('🔍 Checking installation integrity...'));
 
 const requiredModules = [
     '@whiskeysockets/baileys',
     'axios',
-    'chalk',
     'fs-extra',
     'pino',
     'qrcode-terminal'
@@ -17,26 +34,17 @@ let allGood = true;
 requiredModules.forEach(module => {
     try {
         require.resolve(module);
-        console.log(chalk.green(`✅ ${module} - OK`));
+        console.log(color.green(`✅ ${module} - OK`));
     } catch (error) {
-        console.log(chalk.red(`❌ ${module} - MISSING`));
+        console.log(color.red(`❌ ${module} - MISSING`));
         allGood = false;
     }
 });
 
 if (allGood) {
-    console.log(chalk.green('\n🎉 All core dependencies installed successfully!'));
+    console.log(color.green('\n🎉 All core dependencies installed successfully!'));
 } else {
-    console.log(chalk.yellow('\n⚠️  Some dependencies are missing. Bot may run with limited functionality.'));
-    
-    // Create a fallback index that can work with minimal dependencies
-    const fallbackCode = `
-    console.log('🚀 Starting Mavrix Bot with minimal dependencies...');
-    // Minimal bot code can go here
-    `;
-    
-    fs.writeFileSync('fallback-index.js', fallbackCode);
-    console.log(chalk.blue('📁 Created fallback-index.js for minimal operation'));
+    console.log(color.yellow('\n⚠️  Some dependencies are missing.'));
 }
 
-console.log(chalk.cyan('💡 Tip: Run "npm run install:minimal" for a minimal working setup'));
+console.log(color.cyan('💡 Bot ready to start!'));
