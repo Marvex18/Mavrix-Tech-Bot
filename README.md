@@ -48,11 +48,8 @@
   <img src="https://img.shields.io/badge/FORK-REPO-black?style=for-the-badge&logo=github&logoColor=white" alt="Fork Repository"/>
 </a>
 
-<a href="https://replit.com/@DGXeon/Xeon-PairCode?v=1">
-  <img src="https://img.shields.io/badge/GET_PAIR_CODE-FF6B6B?style=for-the-badge&logo=replit&logoColor=white" alt="Get Pair Code"/>
-</a>
-
-<a href="https://knight-bot-paircode.onrender.com">
+<a href="https://replit.com/@DGXeon/Xe
+<a href="https://knight-bot-paircode.onrender.com/">
   <img src="https://img.shields.io/badge/GET_SESSION-Easy_Method-4A90E2?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Get Session"/>
 </a>
 
