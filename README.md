@@ -48,7 +48,6 @@
   <img src="https://img.shields.io/badge/FORK-REPO-black?style=for-the-badge&logo=github&logoColor=white" alt="Fork Repository"/>
 </a>
 
-<a href="https://replit.com/@DGXeon/Xe
 <a href="https://knight-bot-paircode.onrender.com/">
   <img src="https://img.shields.io/badge/GET_SESSION-Easy_Method-4A90E2?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Get Session"/>
 </a>
