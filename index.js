@@ -30,31 +30,70 @@ require('./settings')
 const { Boom } = require('@hapi/boom')
 const fs = require('fs')
 
-// FIX: Import chalk properly and add fallback
-let chalk;
-try {
-    chalk = require('chalk');
-} catch (error) {
-    console.log('⚠️  chalk not found, using fallback...');
-    // Fallback chalk implementation
-    chalk = {
-        blue: (text) => `\x1b[34m${text}\x1b[0m`,
-        red: (text) => `\x1b[31m${text}\x1b[0m`,
-        yellow: (text) => `\x1b[33m${text}\x1b[0m`,
-        green: (text) => `\x1b[32m${text}\x1b[0m`,
-        cyan: (text) => `\x1b[36m${text}\x1b[0m`,
-        hex: (color) => (text) => text, // Simple fallback for hex colors
-        bold: {
-            hex: (color) => (text) => text
-        },
-        bgBlack: (text) => `\x1b[40m${text}\x1b[0m`,
-        black: (text) => `\x1b[30m${text}\x1b[0m`,
-        bgGreen: (text) => `\x1b[42m${text}\x1b[0m`,
-        white: (text) => `\x1b[37m${text}\x1b[0m`,
-        greenBright: (text) => `\x1b[92m${text}\x1b[0m`,
-        redBright: (text) => `\x1b[91m${text}\x1b[0m`
-    };
-}
+// REPLACED: Custom color system without chalk
+const colors = {
+    reset: '\x1b[0m',
+    bright: '\x1b[1m',
+    dim: '\x1b[2m',
+    red: '\x1b[31m',
+    green: '\x1b[32m',
+    yellow: '\x1b[33m',
+    blue: '\x1b[34m',
+    magenta: '\x1b[35m',
+    cyan: '\x1b[36m',
+    white: '\x1b[37m',
+    bgBlack: '\x1b[40m',
+    bgRed: '\x1b[41m',
+    bgGreen: '\x1b[42m',
+    bgYellow: '\x1b[43m',
+    bgBlue: '\x1b[44m'
+};
+
+// Simple color functions
+const color = {
+    blue: (text) => `${colors.blue}${text}${colors.reset}`,
+    red: (text) => `${colors.red}${text}${colors.reset}`,
+    yellow: (text) => `${colors.yellow}${text}${colors.reset}`,
+    green: (text) => `${colors.green}${text}${colors.reset}`,
+    cyan: (text) => `${colors.cyan}${text}${colors.reset}`,
+    magenta: (text) => `${colors.magenta}${text}${colors.reset}`,
+    white: (text) => `${colors.white}${text}${colors.reset}`,
+    
+    // Bright versions
+    greenBright: (text) => `${colors.bright}${colors.green}${text}${colors.reset}`,
+    redBright: (text) => `${colors.bright}${colors.red}${text}${colors.reset}`,
+    yellowBright: (text) => `${colors.bright}${colors.yellow}${text}${colors.reset}`,
+    blueBright: (text) => `${colors.bright}${colors.blue}${text}${colors.reset}`,
+    
+    // Backgrounds
+    bgBlack: (text) => `${colors.bgBlack}${colors.white}${text}${colors.reset}`,
+    bgGreen: (text) => `${colors.bgGreen}${colors.black}${text}${colors.reset}`,
+    bgRed: (text) => `${colors.bgRed}${colors.white}${text}${colors.reset}`,
+    
+    // Hex color approximation
+    hex: (hexColor) => {
+        const colorMap = {
+            '#FFD700': colors.yellow, // Gold
+            '#00FFAA': colors.green,  // Green
+            '#00D4FF': colors.cyan,   // Cyan
+            '#FF6B6B': colors.red,    // Red
+            '#00FF00': colors.green,  // Bright Green
+            '#0000FF': colors.blue,   // Blue
+            '#FF0000': colors.red,    // Red
+            '#FFFFFF': colors.white,  // White
+        };
+        const ansiColor = colorMap[hexColor.toUpperCase()] || colors.white;
+        return (text) => `${ansiColor}${text}${colors.reset}`;
+    },
+    
+    // Bold
+    bold: {
+        hex: (hexColor) => {
+            const baseColor = color.hex(hexColor);
+            return (text) => `${colors.bright}${baseColor(text).replace(colors.reset, '')}${colors.reset}`;
+        }
+    }
+};
 
 const { handleMessages, handleGroupParticipantUpdate, handleStatus } = require('./main');
 const PhoneNumber = require('awesome-phonenumber')
@@ -89,7 +128,6 @@ try {
     }
 }
 
-// Rest of your existing index.js code...
 // Import lightweight store
 const store = require('./lib/lightweight_store')
 
@@ -102,7 +140,7 @@ setInterval(() => store.writeToFile(), settings.storeWriteInterval || 10000)
 setInterval(() => {
     if (global.gc) {
         global.gc()
-        console.log(chalk.blue('🧹 Premium memory optimized'))
+        console.log(color.blue('🧹 Premium memory optimized'))
     }
 }, 60_000)
 
@@ -110,7 +148,7 @@ setInterval(() => {
 setInterval(() => {
     const used = process.memoryUsage().rss / 1024 / 1024
     if (used > 280) {
-        console.log(chalk.red('⚠️ High memory usage, restarting...'))
+        console.log(color.red('⚠️ High memory usage, restarting...'))
         process.exit(1)
     }
 }, 30_000)
@@ -157,11 +195,11 @@ const RESTART_WINDOW = 60000
 
 async function startMavrixBot() {
     try {
-        console.log(chalk.hex('#FFD700')(PREMIUM_BANNER))
-        console.log(chalk.hex('#00FFAA')(`💎 Mavrix Tech © 2025 | Premium Edition\n`))
+        console.log(color.hex('#FFD700')(PREMIUM_BANNER))
+        console.log(color.hex('#00FFAA')(`💎 Mavrix Tech © 2025 | Premium Edition\n`))
         
         let { version } = await fetchLatestBaileysVersion()
-        console.log(chalk.hex('#00D4FF')(`🚀 Baileys version: ${version}`))
+        console.log(color.hex('#00D4FF')(`🚀 Baileys version: ${version}`))
         
         const { state, saveCreds } = await useMultiFileAuthState(`./session`)
         const msgRetryCounterCache = new NodeCache()
@@ -274,14 +312,14 @@ async function startMavrixBot() {
             if (!!global.phoneNumber) {
                 phoneNumber = global.phoneNumber
             } else {
-                phoneNumber = await question(chalk.bgBlack(chalk.greenBright(`Please type your WhatsApp number:\nFormat: 6281376552730 (without + or spaces) : `)))
+                phoneNumber = await question(color.bgBlack(color.greenBright(`Please type your WhatsApp number:\nFormat: 6281376552730 (without + or spaces) : `)))
             }
 
             phoneNumber = phoneNumber.replace(/[^0-9]/g, '')
 
             const pn = require('awesome-phonenumber')
             if (!pn('+' + phoneNumber).isValid()) {
-                console.log(chalk.red('Invalid phone number. Please enter your full international number.'))
+                console.log(color.red('Invalid phone number. Please enter your full international number.'))
                 process.exit(1)
             }
 
@@ -289,11 +327,11 @@ async function startMavrixBot() {
                 try {
                     let code = await MavrixBot.requestPairingCode(phoneNumber)
                     code = code?.match(/.{1,4}/g)?.join("-") || code
-                    console.log(chalk.black(chalk.bgGreen(`Your Pairing Code: `)), chalk.black(chalk.white(code)))
-                    console.log(chalk.yellow(`\nPlease enter this code in your WhatsApp app:\n1. Open WhatsApp\n2. Go to Settings > Linked Devices\n3. Tap "Link a Device"\n4. Enter the code shown above`))
+                    console.log(color.black(color.bgGreen(`Your Pairing Code: `)), color.black(color.white(code)))
+                    console.log(color.yellow(`\nPlease enter this code in your WhatsApp app:\n1. Open WhatsApp\n2. Go to Settings > Linked Devices\n3. Tap "Link a Device"\n4. Enter the code shown above`))
                 } catch (error) {
                     console.error('Error requesting pairing code:', error)
-                    console.log(chalk.red('Failed to get pairing code. Please check your phone number and try again.'))
+                    console.log(color.red('Failed to get pairing code. Please check your phone number and try again.'))
                 }
             }, 3000)
         }
@@ -303,16 +341,16 @@ async function startMavrixBot() {
             const { connection, lastDisconnect, qr } = s
             
             if (qr) {
-                console.log(chalk.yellow('📱 QR Code generated. Please scan with WhatsApp.'))
+                console.log(color.yellow('📱 QR Code generated. Please scan with WhatsApp.'))
             }
             
             if (connection === 'connecting') {
-                console.log(chalk.yellow('🔄 Connecting to WhatsApp...'))
+                console.log(color.yellow('🔄 Connecting to WhatsApp...'))
             }
             
             if (connection == "open") {
-                console.log(chalk.hex('#00FFAA')(`\n💎 PREMIUM BOT CONNECTED SUCCESSFULLY! ✅\n`))
-                console.log(chalk.yellow(`Connected to: ${JSON.stringify(MavrixBot.user, null, 2)}`))
+                console.log(color.hex('#00FFAA')(`\n💎 PREMIUM BOT CONNECTED SUCCESSFULLY! ✅\n`))
+                console.log(color.yellow(`Connected to: ${JSON.stringify(MavrixBot.user, null, 2)}`))
 
                 try {
                     const botNumber = MavrixBot.user.id.split(':')[0] + '@s.whatsapp.net'
@@ -333,14 +371,14 @@ async function startMavrixBot() {
                 }
 
                 await delay(1999)
-                console.log(chalk.yellow(`\n               ${chalk.bold.hex('#FFD700')(`[ ${global.botname} ]`)}\n`))
-                console.log(chalk.cyan(`< ================================= >`))
-                console.log(chalk.hex('#FF6B6B')(`\n${global.themeemoji} YT CHANNEL: Mavrix Tech`))
-                console.log(chalk.hex('#FF6B6B')(`${global.themeemoji} GITHUB: Marvex18`))
-                console.log(chalk.hex('#FF6B6B')(`${global.themeemoji} WA NUMBER: ${owner[0]?.replace('@s.whatsapp.net', '') || 'Not set'}`))
-                console.log(chalk.hex('#FF6B6B')(`${global.themeemoji} CREDIT: Mavrix Tech`))
-                console.log(chalk.hex('#00FFAA')(`${global.themeemoji} 🤖 Premium Bot Connected! ✅`))
-                console.log(chalk.hex('#00D4FF')(`Bot Version: ${settings.version}`))
+                console.log(color.yellow(`\n               ${color.bold.hex('#FFD700')(`[ ${global.botname} ]`)}\n`))
+                console.log(color.cyan(`< ================================= >`))
+                console.log(color.hex('#FF6B6B')(`\n${global.themeemoji} YT CHANNEL: Mavrix Tech`))
+                console.log(color.hex('#FF6B6B')(`${global.themeemoji} GITHUB: Marvex18`))
+                console.log(color.hex('#FF6B6B')(`${global.themeemoji} WA NUMBER: ${owner[0]?.replace('@s.whatsapp.net', '') || 'Not set'}`))
+                console.log(color.hex('#FF6B6B')(`${global.themeemoji} CREDIT: Mavrix Tech`))
+                console.log(color.hex('#00FFAA')(`${global.themeemoji} 🤖 Premium Bot Connected! ✅`))
+                console.log(color.hex('#00D4FF')(`Bot Version: ${settings.version}`))
                 
                 restartCount = 0
                 lastRestartTime = 0
@@ -350,20 +388,20 @@ async function startMavrixBot() {
                 const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut
                 const statusCode = lastDisconnect?.error?.output?.statusCode
                 
-                console.log(chalk.red(`Connection closed due to ${lastDisconnect?.error}, reconnecting ${shouldReconnect}`))
+                console.log(color.red(`Connection closed due to ${lastDisconnect?.error}, reconnecting ${shouldReconnect}`))
                 
                 if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
                     try {
                         rmSync('./session', { recursive: true, force: true })
-                        console.log(chalk.yellow('Session folder deleted. Please re-authenticate.'))
+                        console.log(color.yellow('Session folder deleted. Please re-authenticate.'))
                     } catch (error) {
                         console.error('Error deleting session:', error)
                     }
-                    console.log(chalk.red('Session logged out. Please re-authenticate.'))
+                    console.log(color.red('Session logged out. Please re-authenticate.'))
                 }
                 
                 if (shouldReconnect) {
-                    console.log(chalk.yellow('Reconnecting...'))
+                    console.log(color.yellow('Reconnecting...'))
                     await delay(5000)
                     startMavrixBot()
                 }
@@ -431,12 +469,12 @@ async function startBotWithGuard() {
     lastRestartTime = now
     
     if (restartCount > MAX_RESTARTS) {
-        console.log(chalk.red(`🚨 Too many restarts, waiting 30 seconds...`))
+        console.log(color.red(`🚨 Too many restarts, waiting 30 seconds...`))
         setTimeout(startMavrixBot, 30000)
         return
     }
     
-    console.log(chalk.yellow(`🔄 Restart attempt ${restartCount}/${MAX_RESTARTS}`))
+    console.log(color.yellow(`🔄 Restart attempt ${restartCount}/${MAX_RESTARTS}`))
     await startMavrixBot()
 }
 
@@ -457,7 +495,7 @@ process.on('unhandledRejection', (err) => {
 let file = require.resolve(__filename)
 fs.watchFile(file, () => {
     fs.unwatchFile(file)
-    console.log(chalk.redBright(`Update ${__filename}`))
+    console.log(color.redBright(`Update ${__filename}`))
     delete require.cache[file]
     require(file)
 })
